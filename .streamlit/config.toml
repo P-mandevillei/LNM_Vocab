@@ -1,0 +1,9 @@
+# Only the accent and typeface are set, so the app still follows whatever
+# light/dark theme the viewer is using.
+[theme]
+primaryColor = "#7a2e2e"
+font = "serif"
+
+[server]
+# The chapter files are read from disk, never uploaded.
+maxUploadSize = 1

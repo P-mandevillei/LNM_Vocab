@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Latin Vocab Quiz</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<header>
+  <h1>Latin Vocab Quiz</h1>
+  <p class="sub">Drawn from the chapter notes in this vault.</p>
+</header>
+
+<main>
+  <!-- ---------------- setup ---------------- -->
+  <section id="setup" class="card">
+    <h2>Chapters</h2>
+    <div class="filelist-actions">
+      <button type="button" class="link" id="select-all">select all</button>
+      <button type="button" class="link" id="select-none">select none</button>
+      <button type="button" class="link" id="reload-files">reload files</button>
+    </div>
+    <div id="filelist" class="filelist">Loading…</div>
+
+    <h2>Mode</h2>
+    <div class="radios">
+      <label><input type="radio" name="mode" value="la_to_en"> Latin → English <span class="hint">(give the English meaning)</span></label>
+      <label><input type="radio" name="mode" value="en_to_la"> English → Latin <span class="hint">(write the Latin word)</span></label>
+      <label><input type="radio" name="mode" value="mixed" checked> Mixed</label>
+    </div>
+
+    <h2>Options</h2>
+    <div class="options">
+      <label class="inline">
+        Number of questions
+        <input type="number" id="count" value="10" min="1" max="200">
+      </label>
+      <label class="inline">
+        <input type="checkbox" id="exhaustive">
+        Exhaustive <span class="hint">(every word in the selected chapters, ignoring the count)</span>
+      </label>
+      <label class="inline">
+        <input type="checkbox" id="shuffle" checked>
+        Shuffle order <span class="hint">(off = the order the chapters list them)</span>
+      </label>
+      <label class="inline">
+        <input type="checkbox" id="parsing" checked>
+        Also test parsing <span class="hint">(genitive &amp; gender for nouns, principal parts for verbs)</span>
+      </label>
+    </div>
+
+    <p class="poolinfo" id="poolinfo"></p>
+    <div class="buttons">
+      <button id="start" class="primary">Start quiz</button>
+      <button id="print" class="secondary">Printable sheet…</button>
+    </div>
+    <p class="error" id="setup-error" hidden></p>
+
+    <details id="printopts">
+      <summary>Printable sheet options</summary>
+      <div class="options">
+        <p class="hint">The options above apply to the sheet as well.</p>
+        <label class="inline">
+          <input type="checkbox" id="answerkey" checked>
+          Include an answer key on the last page
+        </label>
+      </div>
+    </details>
+  </section>
+
+  <!-- ---------------- quiz ---------------- -->
+  <section id="quiz" class="card" hidden>
+    <div class="quizhead">
+      <h2 id="quiz-title">Question sheet</h2>
+      <button type="button" class="link" id="abandon">start over</button>
+    </div>
+    <form id="quizform"></form>
+    <button id="submit" class="primary">Submit answers</button>
+    <p class="hint">Macrons are optional — you'll be told when you left one out.</p>
+  </section>
+
+  <!-- ---------------- results ---------------- -->
+  <section id="results" class="card" hidden>
+    <div class="quizhead">
+      <h2>Results</h2>
+      <button type="button" class="link" id="again">new quiz</button>
+    </div>
+    <div id="score"></div>
+    <div class="buttons">
+      <button id="retest" class="primary" hidden></button>
+    </div>
+    <div id="resultlist"></div>
+  </section>
+</main>
+
+<script src="/app.js"></script>
+</body>
+</html>

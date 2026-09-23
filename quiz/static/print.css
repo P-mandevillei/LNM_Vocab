@@ -1,0 +1,168 @@
+/* Worksheet: black on white, on screen and on paper. */
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 0 1rem 3rem;
+  background: #f2f0eb;
+  color: #000;
+  font: 12pt/1.45 "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+}
+
+/* ------------------------------- toolbar -------------------------------- */
+
+.toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.9rem;
+  max-width: 48rem;
+  margin: 0 auto;
+  padding: 0.7rem 0;
+  background: #f2f0eb;
+  border-bottom: 1px solid #d8d3c8;
+  font-size: 0.85rem;
+}
+.toolbar .spacer { flex: 1; }
+.toolbar a { color: #7a2e2e; }
+.toolbar label.inline { display: flex; align-items: center; gap: 0.35rem; }
+.toolbar select { font: inherit; }
+
+button {
+  font: inherit;
+  font-weight: 600;
+  border-radius: 7px;
+  padding: 0.4rem 0.9rem;
+  cursor: pointer;
+}
+button.primary { background: #7a2e2e; color: #fff; border: 0; }
+button.secondary { background: #fff; color: #23201c; border: 1px solid #c9c2b4; }
+
+/* -------------------------------- sheet --------------------------------- */
+
+#sheet {
+  max-width: 48rem;
+  margin: 1.5rem auto;
+  padding: 2.2rem 2.4rem 2.8rem;
+  background: #fff;
+  border: 1px solid #d8d3c8;
+}
+
+.loading { color: #6b655c; font-style: italic; }
+
+.sheethead { margin-bottom: 1.6rem; }
+.sheethead h1 { margin: 0; font-size: 1.5rem; letter-spacing: -0.01em; }
+.sheetmeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+  margin: 0.3rem 0 0;
+  font-size: 0.82rem;
+  color: #4a463f;
+}
+.sheetmeta .stamp {
+  border: 1px solid #4a463f;
+  border-radius: 3px;
+  padding: 0 0.35rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.72rem;
+}
+.namedate {
+  margin: 1.1rem 0 0;
+  font-size: 0.9rem;
+  border-top: 1px solid #000;
+  padding-top: 0.8rem;
+}
+
+.plist { margin: 0; padding-left: 2.1rem; }
+.pq { margin-bottom: 0.55rem; break-inside: avoid; }
+body[data-spacing=tight] .pq { margin-bottom: 0.15rem; }
+body[data-spacing=roomy] .pq { margin-bottom: 1.2rem; }
+
+.pqline { display: flex; align-items: baseline; gap: 0.5rem; }
+.pword { white-space: nowrap; }
+.pword.latin { font-style: italic; }
+.ppos {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6b655c;
+  white-space: nowrap;
+}
+
+.blank {
+  flex: 1 1 4rem;
+  min-width: 3rem;
+  border-bottom: 1px solid #000;
+  align-self: flex-end;
+  height: 1.05em;
+}
+body[data-spacing=roomy] .blank { height: 1.5em; }
+
+.pfields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.4rem;
+  margin: 0.15rem 0 0;
+  font-size: 0.85rem;
+}
+.pfield {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  flex: 1 1 11rem;
+  min-width: 9rem;
+}
+.pflabel { color: #4a463f; white-space: nowrap; }
+
+/* two-column question layout for long/exhaustive sheets */
+body.twocol .plist { columns: 2; column-gap: 2.2rem; }
+body.twocol .pq { break-inside: avoid; }
+
+/* ------------------------------ answer key ------------------------------ */
+
+.answerkey { margin-top: 2.4rem; break-before: page; }
+.answerkey h2 {
+  margin: 0 0 0.7rem;
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border-bottom: 1px solid #000;
+  padding-bottom: 0.3rem;
+}
+.keylist {
+  margin: 0;
+  padding-left: 2.1rem;
+  columns: 2;
+  column-gap: 2.2rem;
+  font-size: 0.85rem;
+}
+.keyitem { break-inside: avoid; margin-bottom: 0.15rem; }
+.keyprompt { font-style: italic; }
+.keysep { color: #6b655c; margin: 0 0.25rem; }
+.keyanswer { font-weight: 600; }
+.keyfields { color: #4a463f; }
+
+body.nokey .answerkey { display: none; }
+
+/* -------------------------------- print --------------------------------- */
+
+@page { margin: 0.7in 0.75in; }
+
+@media print {
+  body { background: #fff; padding: 0; font-size: 11pt; }
+  .toolbar { display: none; }
+  #sheet {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+  .sheethead h1 { font-size: 1.3rem; }
+  .blank { border-bottom: 1px solid #000; }
+}

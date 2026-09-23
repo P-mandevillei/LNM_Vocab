@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Latin Vocab — printable sheet</title>
+<link rel="stylesheet" href="/print.css">
+</head>
+<body>
+
+<div class="toolbar" id="toolbar">
+  <button id="do-print" class="primary">Print</button>
+  <button id="reroll" class="secondary">New draw</button>
+  <span class="spacer"></span>
+  <label class="inline"><input type="checkbox" id="show-key" checked> answer key</label>
+  <label class="inline">
+    lines
+    <select id="spacing">
+      <option value="tight">tight</option>
+      <option value="normal" selected>normal</option>
+      <option value="roomy">roomy</option>
+    </select>
+  </label>
+  <label class="inline"><input type="checkbox" id="twocol"> two columns</label>
+  <a href="/">← back to the quiz</a>
+</div>
+
+<article id="sheet">
+  <p class="loading">Building the sheet…</p>
+</article>
+
+<script src="/print.js"></script>
+</body>
+</html>

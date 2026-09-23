@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+
+# Obsidian per-machine state; the vault's own settings are worth keeping.
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/cache
+.trash/

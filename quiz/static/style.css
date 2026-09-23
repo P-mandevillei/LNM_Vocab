@@ -1,0 +1,245 @@
+:root {
+  --bg: #f7f5f0;
+  --card: #ffffff;
+  --ink: #23201c;
+  --muted: #7c766c;
+  --line: #e3ded3;
+  --accent: #7a2e2e;
+  --ok: #1f7a4d;
+  --warn: #a06a12;
+  --bad: #a32626;
+  --ok-bg: #eaf6ef;
+  --warn-bg: #fbf3e2;
+  --bad-bg: #fbebeb;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #17161a;
+    --card: #1f1e23;
+    --ink: #e8e4dc;
+    --muted: #9a938a;
+    --line: #322f37;
+    --accent: #d98b8b;
+    --ok: #62c795;
+    --warn: #d9b062;
+    --bad: #e58585;
+    --ok-bg: #1a2b22;
+    --warn-bg: #2c2617;
+    --bad-bg: #2e1d1d;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 0 1rem 4rem;
+  background: var(--bg);
+  color: var(--ink);
+  font: 16px/1.5 "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+}
+
+header { max-width: 46rem; margin: 2.5rem auto 1.5rem; }
+h1 { margin: 0; font-size: 1.9rem; letter-spacing: -0.01em; }
+h2 {
+  margin: 1.6rem 0 0.6rem;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--muted);
+  font-weight: 600;
+}
+h2:first-of-type { margin-top: 0; }
+.sub { margin: 0.35rem 0 0; color: var(--muted); }
+main { max-width: 46rem; margin: 0 auto; }
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 1.4rem 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.hint { color: var(--muted); font-size: 0.85rem; }
+.error { color: var(--bad); }
+.poolinfo { color: var(--muted); font-size: 0.88rem; margin: 1.2rem 0 0.9rem; }
+
+/* ------------------------------- controls ------------------------------ */
+
+button.primary {
+  font: inherit;
+  font-weight: 600;
+  background: var(--accent);
+  color: #fff;
+  border: 0;
+  border-radius: 8px;
+  padding: 0.6rem 1.2rem;
+  cursor: pointer;
+}
+button.primary:hover { filter: brightness(1.1); }
+
+button.secondary {
+  font: inherit;
+  font-weight: 600;
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.6rem 1.2rem;
+  cursor: pointer;
+}
+button.secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+.buttons { display: flex; gap: 0.7rem; flex-wrap: wrap; }
+
+#printopts { margin-top: 1.2rem; }
+#printopts summary {
+  cursor: pointer;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--muted);
+}
+#printopts .options { margin-top: 0.8rem; }
+
+button.link {
+  font: inherit;
+  font-size: 0.82rem;
+  background: none;
+  border: 0;
+  color: var(--accent);
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.filelist-actions { display: flex; gap: 1rem; margin-bottom: 0.6rem; }
+
+.filelist { display: flex; flex-direction: column; gap: 0.15rem; }
+.fileitem {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.fileitem:hover { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+.fname { font-weight: 600; }
+.fmeta { color: var(--muted); font-size: 0.82rem; }
+
+.radios { display: flex; flex-direction: column; gap: 0.3rem; }
+.radios label { cursor: pointer; }
+.options { display: flex; flex-direction: column; gap: 0.6rem; }
+label.inline { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+input[type=number] {
+  font: inherit;
+  width: 5rem;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--bg);
+  color: inherit;
+}
+
+/* ------------------------------- questions ----------------------------- */
+
+.quizhead { display: flex; align-items: baseline; justify-content: space-between; }
+.quizhead h2 { margin-top: 0; }
+
+.question {
+  padding: 1rem 0 1.1rem;
+  border-top: 1px solid var(--line);
+}
+.question:first-child { border-top: 0; padding-top: 0.2rem; }
+
+.qhead {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.qnum { font-weight: 700; color: var(--ink); }
+.qlabel { letter-spacing: 0.02em; }
+.chip {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.05rem 0.5rem;
+}
+.chip.subtle { opacity: 0.7; }
+
+.prompt { font-size: 1.35rem; margin: 0.45rem 0 0.6rem; }
+.prompt.latin { font-style: italic; }
+
+input.answer {
+  font: inherit;
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--bg);
+  color: inherit;
+}
+input.answer:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+input.answer.small { font-size: 0.95rem; }
+
+.fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 0.6rem;
+  margin-top: 0.7rem;
+}
+.field { display: flex; flex-direction: column; gap: 0.2rem; }
+.flabel { font-size: 0.76rem; color: var(--muted); }
+
+/* -------------------------------- results ------------------------------ */
+
+.bigscore { font-size: 2.2rem; font-weight: 700; }
+#score { margin-bottom: 1rem; }
+
+.question.result { padding-left: 0.8rem; border-left: 3px solid transparent; }
+.question.result.ok { border-left-color: var(--ok); }
+.question.result.warn { border-left-color: var(--warn); }
+.question.result.bad { border-left-color: var(--bad); }
+
+.row {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  padding: 0.4rem 0.6rem;
+  border-radius: 7px;
+  margin-bottom: 0.3rem;
+}
+.row.ok { background: var(--ok-bg); }
+.row.warn { background: var(--warn-bg); }
+.row.bad { background: var(--bad-bg); }
+.mark { font-weight: 700; width: 1rem; }
+.row.ok .mark { color: var(--ok); }
+.row.warn .mark { color: var(--warn); }
+.row.bad .mark { color: var(--bad); }
+.rowbody { flex: 1; min-width: 0; }
+.rowlabel { font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.yours, .right { display: flex; gap: 0.5rem; align-items: baseline; }
+.tag {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  min-width: 3.4rem;
+}
+.val { overflow-wrap: anywhere; }
+.right .val { font-weight: 600; }
+.note { font-size: 0.76rem; color: var(--warn); }
+.fullentry {
+  margin-top: 0.45rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+  font-style: italic;
+}
