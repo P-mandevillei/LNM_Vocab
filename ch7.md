@@ -21,4 +21,4 @@ invideo, invidere, invidi, invisum + dative - to envy someone
 puto, putare, putavi, putatum - to think, consider
 
 **PRONOUN**
-se (reflexive proboun, accusative) - s/he (her/himself)/they (themselves) in an indirect statement
+se (reflexive pronoun accusative) - s/he (her/himself)/they (themselves) in an indirect statement
