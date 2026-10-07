@@ -7,7 +7,7 @@ gremium, gremii, n. - lap
 oculus, oculi, m. - eye
 passer, passeris, m. - sparrow
 senex, senis, m. - old man
-soro, sororis, f. - sister
+soror, sororis, f. - sister
 verbum, verbi, n. - word
 
 **ADJECTIVES**
