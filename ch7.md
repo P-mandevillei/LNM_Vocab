@@ -6,8 +6,8 @@ domina, dominae, f. - mistress
 gremium, gremii, n. - lap
 oculus, oculi, m. - eye
 passer, passeris, m. - sparrow
-senex, senis, n. - old man
-soro, sororis, f. - sister
+senex, senis, m. - old man
+soror, sororis, f. - sister
 verbum, verbi, n. - word
 
 **ADJECTIVES**
@@ -21,4 +21,4 @@ invideo, invidere, invidi, invisum + dative - to envy someone
 puto, putare, putavi, putatum - to think, consider
 
 **PRONOUN**
-se (reflexive proboun, accusative) - s/he (her/himself)/they (themselves) in an indirect statement
+se (reflexive pronoun accusative) - s/he (her/himself)/they (themselves) in an indirect statement
