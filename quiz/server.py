@@ -23,12 +23,13 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 import vocab
+import morphology
 
 HERE = Path(__file__).resolve().parent
 VAULT = HERE.parent
 STATIC = HERE / "static"
 
-QUIZZES: dict[str, list[dict]] = {}
+QUIZZES: dict[str, dict] = {}
 QUIZ_LOCK = threading.Lock()
 MAX_QUIZZES = 50
 
@@ -75,6 +76,12 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/files":
             return self._json({"files": self._file_list()})
 
+        if path == "/api/morphology/files":
+            try:
+                return self._json({"files": self._morphology_files()})
+            except ValueError as exc:
+                return self._json({"error": str(exc)}, 400)
+
         if path in ("/", "/index.html"):
             path = "/index.html"
 
@@ -90,6 +97,8 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         path = self.path.split("?", 1)[0]
         try:
+            if path in ("/api/morphology/pool", "/api/morphology/quiz"):
+                return self._morphology_start(preview=path.endswith("/pool"))
             if path == "/api/quiz":
                 return self._start_quiz()
             if path == "/api/grade":
@@ -126,7 +135,8 @@ class Handler(BaseHTTPRequestHandler):
                 for e in entries]
         return pool, count, mode, include_parsing
 
-    def _remember(self, questions, files, mode, include_parsing) -> str:
+    def _remember(self, questions, files, mode, include_parsing,
+                  kind="vocabulary") -> str:
         qid = uuid.uuid4().hex
         with QUIZ_LOCK:
             while len(QUIZZES) >= MAX_QUIZZES:
@@ -137,6 +147,7 @@ class Handler(BaseHTTPRequestHandler):
                 "mode": mode,
                 "parsing": include_parsing,
                 "missed": [],
+                "kind": kind,
             }
         return qid
 
@@ -180,6 +191,13 @@ class Handler(BaseHTTPRequestHandler):
             return self._json({"error": "That quiz expired -- please start a new one."}, 400)
         if not rec["missed"]:
             return self._json({"error": "Nothing to retest -- nothing was missed."}, 400)
+
+        if rec.get("kind") == "morphology":
+            questions = morphology.retest(rec["questions"], rec["missed"])
+            qid = self._remember(questions, rec["files"], "morphology", False,
+                                 kind="morphology")
+            return self._json({"id": qid, "questions": morphology.public(questions),
+                               "retest": True})
 
         vault = vocab.load_vault(VAULT)
         pool = [e for name, entries in vault.items() if name in rec["files"]
@@ -242,12 +260,48 @@ class Handler(BaseHTTPRequestHandler):
         if not rec:
             return self._json({"error": "That quiz expired -- please start a new one."}, 400)
 
-        graded = vocab.grade(rec["questions"], req.get("answers") or [])
+        grader = morphology.grade if rec.get("kind") == "morphology" else vocab.grade
+        graded = grader(rec["questions"], req.get("answers") or [])
         with QUIZ_LOCK:
             if qid in QUIZZES:                 # remember what to retest
                 QUIZZES[qid]["missed"] = graded["missed"]
         graded.pop("missed", None)             # the page only needs the count
         return self._json(graded)
+
+    def _morphology_files(self):
+        opts = morphology.options({})
+        lexicon = morphology.load_lexicon(VAULT)
+        out = []
+        for name, entries in vocab.load_vault(VAULT).items():
+            _, excluded, counts = morphology.candidates(entries, opts, lexicon=lexicon)
+            out.append({"name": name, "by_pos": {k: counts[k] for k in
+                        ("noun", "adjective", "verb")}, "excluded": len(excluded)})
+        return out
+
+    def _morphology_start(self, preview=False):
+        req = self._body()
+        try:
+            opts = morphology.options(req)
+            lexicon = morphology.load_lexicon(VAULT)
+        except (ValueError, TypeError) as exc:
+            return self._json({"error": str(exc)}, 400)
+        wanted = req.get("files") or []
+        pool = [e for name, entries in vocab.load_vault(VAULT).items()
+                if name in wanted for e in entries]
+        if preview:
+            available, excluded, counts = morphology.candidates(pool, opts, lexicon=lexicon)
+            return self._json({"pool": len(available), "counts": counts,
+                               "excluded": excluded})
+        data = morphology.build_quiz(pool, opts, lexicon=lexicon)
+        questions = data.pop("questions")
+        if not questions:
+            return self._json({"error": "No supported entries match these settings. "
+                               "Pairs need both nouns and adjectives in the selected chapters.",
+                               **data}, 400)
+        qid = self._remember(questions, wanted, "morphology", False,
+                             kind="morphology")
+        return self._json({"id": qid, "questions": morphology.public(questions),
+                           **data})
 
 
 def main():

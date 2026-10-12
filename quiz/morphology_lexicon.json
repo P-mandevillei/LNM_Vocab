@@ -1,0 +1,1017 @@
+{
+  "version": 1,
+  "nouns": {
+    "agricola": {
+      "forms": [
+        "agricola",
+        "agricolae"
+      ],
+      "gender": "m",
+      "declension": 1
+    },
+    "aqua": {
+      "forms": [
+        "aqua",
+        "aquae"
+      ],
+      "gender": "f",
+      "declension": 1
+    },
+    "athleta": {
+      "forms": [
+        "āthlēta",
+        "āthlētae"
+      ],
+      "gender": "m",
+      "declension": 1
+    },
+    "filia": {
+      "forms": [
+        "fīlia",
+        "fīliae"
+      ],
+      "gender": "f",
+      "declension": 1,
+      "overrides": {
+        "dative_plural": [
+          "fīliābus",
+          "fīliīs"
+        ],
+        "ablative_plural": [
+          "fīliābus",
+          "fīliīs"
+        ]
+      }
+    },
+    "lupa": {
+      "forms": [
+        "lupa",
+        "lupae"
+      ],
+      "gender": "f",
+      "declension": 1
+    },
+    "nauta": {
+      "forms": [
+        "nauta",
+        "nautae"
+      ],
+      "gender": "m",
+      "declension": 1
+    },
+    "poeta": {
+      "forms": [
+        "poēta",
+        "poētae"
+      ],
+      "gender": "m",
+      "declension": 1
+    },
+    "puella": {
+      "forms": [
+        "puella",
+        "puellae"
+      ],
+      "gender": "f",
+      "declension": 1
+    },
+    "roma": {
+      "forms": [
+        "Rōma",
+        "Rōmae"
+      ],
+      "gender": "f",
+      "declension": 1
+    },
+    "terra": {
+      "forms": [
+        "terra",
+        "terrae"
+      ],
+      "gender": "f",
+      "declension": 1
+    },
+    "fabula": {
+      "forms": [
+        "fābula",
+        "fābulae"
+      ],
+      "gender": "f",
+      "declension": 1
+    },
+    "forma": {
+      "forms": [
+        "fōrma",
+        "fōrmae"
+      ],
+      "gender": "f",
+      "declension": 1
+    },
+    "patria": {
+      "forms": [
+        "patria",
+        "patriae"
+      ],
+      "gender": "f",
+      "declension": 1
+    },
+    "ager": {
+      "forms": [
+        "ager",
+        "agrī"
+      ],
+      "gender": "m",
+      "declension": 2
+    },
+    "amicus": {
+      "forms": [
+        "amīcus",
+        "amīcī"
+      ],
+      "gender": "m",
+      "declension": 2
+    },
+    "animus": {
+      "forms": [
+        "animus",
+        "animī"
+      ],
+      "gender": "m",
+      "declension": 2
+    },
+    "casa": {
+      "forms": [
+        "casa",
+        "casae"
+      ],
+      "gender": "f",
+      "declension": 1
+    },
+    "filius": {
+      "forms": [
+        "fīlius",
+        "fīliī"
+      ],
+      "gender": "m",
+      "declension": 2
+    },
+    "puer": {
+      "forms": [
+        "puer",
+        "puerī"
+      ],
+      "gender": "m",
+      "declension": 2
+    },
+    "rivus": {
+      "forms": [
+        "rīvus",
+        "rīvī"
+      ],
+      "gender": "m",
+      "declension": 2
+    },
+    "via": {
+      "forms": [
+        "via",
+        "viae"
+      ],
+      "gender": "f",
+      "declension": 1
+    },
+    "vir": {
+      "forms": [
+        "vir",
+        "virī"
+      ],
+      "gender": "m",
+      "declension": 2
+    },
+    "bellum": {
+      "forms": [
+        "bellum",
+        "bellī"
+      ],
+      "gender": "n",
+      "declension": 2
+    },
+    "castra": {
+      "forms": [
+        "castra",
+        "castrōrum"
+      ],
+      "gender": "n",
+      "declension": 2,
+      "number": "pl"
+    },
+    "dolus": {
+      "forms": [
+        "dolus",
+        "dolī"
+      ],
+      "gender": "m",
+      "declension": 2
+    },
+    "praemium": {
+      "forms": [
+        "praemium",
+        "praemiī"
+      ],
+      "gender": "n",
+      "declension": 2
+    },
+    "venenum": {
+      "forms": [
+        "venēnum",
+        "venēnī"
+      ],
+      "gender": "n",
+      "declension": 2
+    },
+    "vinculum": {
+      "forms": [
+        "vinculum",
+        "vinculī"
+      ],
+      "gender": "n",
+      "declension": 2
+    },
+    "auxilium": {
+      "forms": [
+        "auxilium",
+        "auxiliī"
+      ],
+      "gender": "n",
+      "declension": 2
+    },
+    "consilium": {
+      "forms": [
+        "consilium",
+        "consiliī"
+      ],
+      "gender": "n",
+      "declension": 2
+    },
+    "epistula": {
+      "forms": [
+        "epistula",
+        "epistulae"
+      ],
+      "gender": "f",
+      "declension": 1
+    },
+    "familia": {
+      "forms": [
+        "familia",
+        "familiae"
+      ],
+      "gender": "f",
+      "declension": 1
+    },
+    "gaudium": {
+      "forms": [
+        "gaudium",
+        "gaudiī"
+      ],
+      "gender": "n",
+      "declension": 2
+    },
+    "lacrima": {
+      "forms": [
+        "lacrima",
+        "lacrimae"
+      ],
+      "gender": "f",
+      "declension": 1
+    },
+    "exemplum": {
+      "forms": [
+        "exemplum",
+        "exemplī"
+      ],
+      "gender": "n",
+      "declension": 2
+    },
+    "liber": {
+      "forms": [
+        "liber",
+        "librī"
+      ],
+      "gender": "m",
+      "declension": 2
+    },
+    "littera": {
+      "forms": [
+        "littera",
+        "litterae"
+      ],
+      "gender": "f",
+      "declension": 1
+    },
+    "memoria": {
+      "forms": [
+        "memoria",
+        "memoriae"
+      ],
+      "gender": "f",
+      "declension": 1
+    },
+    "tenebrae": {
+      "forms": [
+        "tenebrae",
+        "tenebrārum"
+      ],
+      "gender": "f",
+      "declension": 1,
+      "number": "pl"
+    },
+    "vita": {
+      "forms": [
+        "vīta",
+        "vītae"
+      ],
+      "gender": "f",
+      "declension": 1
+    },
+    "amor": {
+      "forms": [
+        "amor",
+        "amōris"
+      ],
+      "gender": "m",
+      "declension": 3
+    },
+    "deliciae": {
+      "forms": [
+        "dēliciae",
+        "dēliciārum"
+      ],
+      "gender": "f",
+      "declension": 1,
+      "number": "pl"
+    },
+    "digitus": {
+      "forms": [
+        "digitus",
+        "digitī"
+      ],
+      "gender": "m",
+      "declension": 2
+    },
+    "domina": {
+      "forms": [
+        "domina",
+        "dominae"
+      ],
+      "gender": "f",
+      "declension": 1
+    },
+    "gremium": {
+      "forms": [
+        "gremium",
+        "gremiī"
+      ],
+      "gender": "n",
+      "declension": 2
+    },
+    "oculus": {
+      "forms": [
+        "oculus",
+        "oculī"
+      ],
+      "gender": "m",
+      "declension": 2
+    },
+    "passer": {
+      "forms": [
+        "passer",
+        "passeris"
+      ],
+      "gender": "m",
+      "declension": 3
+    },
+    "senex": {
+      "forms": [
+        "senex",
+        "senis"
+      ],
+      "gender": "m",
+      "declension": 3
+    },
+    "soror": {
+      "forms": [
+        "soror",
+        "sorōris"
+      ],
+      "gender": "f",
+      "declension": 3
+    },
+    "verbum": {
+      "forms": [
+        "verbum",
+        "verbī"
+      ],
+      "gender": "n",
+      "declension": 2
+    },
+    "dux": {
+      "forms": [
+        "dux",
+        "ducis"
+      ],
+      "gender": "m",
+      "declension": 3
+    },
+    "fortitudo": {
+      "forms": [
+        "fortitūdō",
+        "fortitūdinis"
+      ],
+      "gender": "f",
+      "declension": 3
+    },
+    "homo": {
+      "forms": [
+        "homō",
+        "hominis"
+      ],
+      "gender": "m",
+      "declension": 3
+    },
+    "miles": {
+      "forms": [
+        "mīles",
+        "mīlitis"
+      ],
+      "gender": "m",
+      "declension": 3
+    },
+    "oraculum": {
+      "forms": [
+        "ōrāculum",
+        "ōrāculī"
+      ],
+      "gender": "n",
+      "declension": 2
+    },
+    "rex": {
+      "forms": [
+        "rēx",
+        "rēgis"
+      ],
+      "gender": "m",
+      "declension": 3
+    },
+    "templum": {
+      "forms": [
+        "templum",
+        "templī"
+      ],
+      "gender": "n",
+      "declension": 2
+    },
+    "timor": {
+      "forms": [
+        "timor",
+        "timōris"
+      ],
+      "gender": "m",
+      "declension": 3
+    },
+    "animal": {
+      "forms": [
+        "animal",
+        "animālis"
+      ],
+      "gender": "n",
+      "declension": 3,
+      "i_stem": true
+    },
+    "arma": {
+      "forms": [
+        "arma",
+        "armōrum"
+      ],
+      "gender": "n",
+      "declension": 2,
+      "number": "pl"
+    },
+    "caput": {
+      "forms": [
+        "caput",
+        "capitis"
+      ],
+      "gender": "n",
+      "declension": 3
+    },
+    "civis": {
+      "forms": [
+        "cīvis",
+        "cīvis"
+      ],
+      "gender": "m/f",
+      "declension": 3,
+      "i_stem": true
+    },
+    "consul": {
+      "forms": [
+        "cōnsul",
+        "cōnsulis"
+      ],
+      "gender": "m",
+      "declension": 3
+    },
+    "corpus": {
+      "forms": [
+        "corpus",
+        "corporis"
+      ],
+      "gender": "n",
+      "declension": 3
+    },
+    "exemplar": {
+      "forms": [
+        "exemplar",
+        "exemplāris"
+      ],
+      "gender": "n",
+      "declension": 3,
+      "i_stem": true
+    },
+    "mare": {
+      "forms": [
+        "mare",
+        "maris"
+      ],
+      "gender": "n",
+      "declension": 3,
+      "i_stem": true
+    },
+    "mors": {
+      "forms": [
+        "mors",
+        "mortis"
+      ],
+      "gender": "f",
+      "declension": 3,
+      "i_stem": true
+    },
+    "mulier": {
+      "forms": [
+        "mulier",
+        "mulieris"
+      ],
+      "gender": "f",
+      "declension": 3
+    },
+    "oratio": {
+      "forms": [
+        "ōrātiō",
+        "ōrātiōnis"
+      ],
+      "gender": "f",
+      "declension": 3
+    },
+    "pax": {
+      "forms": [
+        "pāx",
+        "pācis"
+      ],
+      "gender": "f",
+      "declension": 3
+    },
+    "tempus": {
+      "forms": [
+        "tempus",
+        "temporis"
+      ],
+      "gender": "n",
+      "declension": 3
+    },
+    "urbs": {
+      "forms": [
+        "urbs",
+        "urbis"
+      ],
+      "gender": "f",
+      "declension": 3,
+      "i_stem": true
+    }
+  },
+  "adjectives": {
+    "armatus": {
+      "forms": [
+        "armātus",
+        "armāta",
+        "armātum"
+      ],
+      "declension": 2
+    },
+    "bonus": {
+      "forms": [
+        "bonus",
+        "bona",
+        "bonum"
+      ],
+      "declension": 2
+    },
+    "iustus": {
+      "forms": [
+        "iūstus",
+        "iūsta",
+        "iūstum"
+      ],
+      "declension": 2
+    },
+    "magnus": {
+      "forms": [
+        "magnus",
+        "magna",
+        "magnum"
+      ],
+      "declension": 2
+    },
+    "malus": {
+      "forms": [
+        "malus",
+        "mala",
+        "malum"
+      ],
+      "declension": 2
+    },
+    "praeclarus": {
+      "forms": [
+        "praeclārus",
+        "praeclāra",
+        "praeclārum"
+      ],
+      "declension": 2
+    },
+    "romanus": {
+      "forms": [
+        "Rōmānus",
+        "Rōmāna",
+        "Rōmānum"
+      ],
+      "declension": 2
+    },
+    "longus": {
+      "forms": [
+        "longus",
+        "longa",
+        "longum"
+      ],
+      "declension": 2
+    },
+    "miser": {
+      "forms": [
+        "miser",
+        "misera",
+        "miserum"
+      ],
+      "declension": 2
+    },
+    "pulcher": {
+      "forms": [
+        "pulcher",
+        "pulchra",
+        "pulchrum"
+      ],
+      "declension": 2
+    },
+    "multus": {
+      "forms": [
+        "multus",
+        "multa",
+        "multum"
+      ],
+      "declension": 2
+    },
+    "meus": {
+      "forms": [
+        "meus",
+        "mea",
+        "meum"
+      ],
+      "declension": 2,
+      "overrides": {
+        "m": {
+          "vocative_singular": "mī"
+        }
+      }
+    },
+    "severus": {
+      "forms": [
+        "sevērus",
+        "sevēra",
+        "sevērum"
+      ],
+      "declension": 2
+    }
+  },
+  "verbs": {
+    "amo": {
+      "headword": "amō",
+      "infinitive": "amāre",
+      "conjugation": "1",
+      "passive": true,
+      "aliases": [
+        "amat"
+      ]
+    },
+    "ambulo": {
+      "headword": "ambulō",
+      "infinitive": "ambulāre",
+      "conjugation": "1",
+      "passive": false,
+      "aliases": [
+        "ambulat"
+      ]
+    },
+    "curo": {
+      "headword": "cūrō",
+      "infinitive": "cūrāre",
+      "conjugation": "1",
+      "passive": true,
+      "aliases": [
+        "curat"
+      ]
+    },
+    "debeo": {
+      "headword": "dēbeō",
+      "infinitive": "dēbēre",
+      "conjugation": "2",
+      "passive": true
+    },
+    "exspecto": {
+      "headword": "exspectō",
+      "infinitive": "exspectāre",
+      "conjugation": "1",
+      "passive": true
+    },
+    "habeo": {
+      "headword": "habeō",
+      "infinitive": "habēre",
+      "conjugation": "2",
+      "passive": true
+    },
+    "habito": {
+      "headword": "habitō",
+      "infinitive": "habitāre",
+      "conjugation": "1",
+      "passive": false
+    },
+    "narro": {
+      "headword": "nārrō",
+      "infinitive": "nārrāre",
+      "conjugation": "1",
+      "passive": true
+    },
+    "paro": {
+      "headword": "parō",
+      "infinitive": "parāre",
+      "conjugation": "1",
+      "passive": true
+    },
+    "teneo": {
+      "headword": "teneō",
+      "infinitive": "tenēre",
+      "conjugation": "2",
+      "passive": true
+    },
+    "video": {
+      "headword": "videō",
+      "infinitive": "vidēre",
+      "conjugation": "2",
+      "passive": true
+    },
+    "voco": {
+      "headword": "vocō",
+      "infinitive": "vocāre",
+      "conjugation": "1",
+      "passive": true
+    },
+    "timeo": {
+      "headword": "timeō",
+      "infinitive": "timēre",
+      "conjugation": "2",
+      "passive": true
+    },
+    "do": {
+      "headword": "dō",
+      "infinitive": "dare",
+      "conjugation": "custom",
+      "passive": false,
+      "paradigms": {
+        "active": {
+          "p1_singular": "dō",
+          "p2_singular": "dās",
+          "p3_singular": "dat",
+          "p1_plural": "damus",
+          "p2_plural": "datis",
+          "p3_plural": "dant",
+          "infinitive": "dare"
+        }
+      }
+    },
+    "intro": {
+      "headword": "intrō",
+      "infinitive": "intrāre",
+      "conjugation": "1",
+      "passive": false
+    },
+    "iubeo": {
+      "headword": "iubeō",
+      "infinitive": "iubēre",
+      "conjugation": "2",
+      "passive": true
+    },
+    "cogito": {
+      "headword": "cōgitō",
+      "infinitive": "cōgitāre",
+      "conjugation": "1",
+      "passive": true
+    },
+    "doleo": {
+      "headword": "doleō",
+      "infinitive": "dolēre",
+      "conjugation": "2",
+      "passive": false
+    },
+    "doceo": {
+      "headword": "doceō",
+      "infinitive": "docēre",
+      "conjugation": "2",
+      "passive": true
+    },
+    "firmo": {
+      "headword": "firmō",
+      "infinitive": "firmāre",
+      "conjugation": "1",
+      "passive": true
+    },
+    "iaceo": {
+      "headword": "iaceō",
+      "infinitive": "iacēre",
+      "conjugation": "2",
+      "passive": false
+    },
+    "iudico": {
+      "headword": "iūdicō",
+      "infinitive": "iūdicāre",
+      "conjugation": "1",
+      "passive": true
+    },
+    "maneo": {
+      "headword": "maneō",
+      "infinitive": "manēre",
+      "conjugation": "2",
+      "passive": false
+    },
+    "possum": {
+      "headword": "possum",
+      "infinitive": "posse",
+      "conjugation": "custom",
+      "passive": false,
+      "paradigms": {
+        "active": {
+          "p1_singular": "possum",
+          "p2_singular": "potes",
+          "p3_singular": "potest",
+          "p1_plural": "possumus",
+          "p2_plural": "potestis",
+          "p3_plural": "possunt",
+          "infinitive": "posse"
+        }
+      }
+    },
+    "servo": {
+      "headword": "servō",
+      "infinitive": "servāre",
+      "conjugation": "1",
+      "passive": true
+    },
+    "soleo": {
+      "headword": "soleō",
+      "infinitive": "solēre",
+      "conjugation": "2",
+      "passive": false
+    },
+    "sum": {
+      "headword": "sum",
+      "infinitive": "esse",
+      "conjugation": "custom",
+      "passive": false,
+      "paradigms": {
+        "active": {
+          "p1_singular": "sum",
+          "p2_singular": "es",
+          "p3_singular": "est",
+          "p1_plural": "sumus",
+          "p2_plural": "estis",
+          "p3_plural": "sunt",
+          "infinitive": "esse"
+        }
+      },
+      "aliases": [
+        "est"
+      ]
+    },
+    "aestimo": {
+      "headword": "aestimō",
+      "infinitive": "aestimāre",
+      "conjugation": "1",
+      "passive": true
+    },
+    "invideo": {
+      "headword": "invideō",
+      "infinitive": "invidēre",
+      "conjugation": "2",
+      "passive": false
+    },
+    "puto": {
+      "headword": "putō",
+      "infinitive": "putāre",
+      "conjugation": "1",
+      "passive": true
+    },
+    "decerno": {
+      "headword": "dēcernō",
+      "infinitive": "dēcernere",
+      "conjugation": "3",
+      "passive": true
+    },
+    "dico": {
+      "headword": "dīcō",
+      "infinitive": "dīcere",
+      "conjugation": "3",
+      "passive": true
+    },
+    "intellego": {
+      "headword": "intellegō",
+      "infinitive": "intellegere",
+      "conjugation": "3",
+      "passive": true
+    },
+    "libero": {
+      "headword": "līberō",
+      "infinitive": "līberāre",
+      "conjugation": "1",
+      "passive": true
+    },
+    "navigo": {
+      "headword": "nāvigō",
+      "infinitive": "nāvigāre",
+      "conjugation": "1",
+      "passive": false
+    },
+    "peto": {
+      "headword": "petō",
+      "infinitive": "petere",
+      "conjugation": "3",
+      "passive": true
+    },
+    "vinco": {
+      "headword": "vincō",
+      "infinitive": "vincere",
+      "conjugation": "3",
+      "passive": true
+    },
+    "audio": {
+      "headword": "audiō",
+      "infinitive": "audīre",
+      "conjugation": "4",
+      "passive": true
+    },
+    "credo": {
+      "headword": "crēdō",
+      "infinitive": "crēdere",
+      "conjugation": "3",
+      "passive": false
+    },
+    "gero": {
+      "headword": "gerō",
+      "infinitive": "gerere",
+      "conjugation": "3",
+      "passive": true
+    },
+    "scio": {
+      "headword": "sciō",
+      "infinitive": "scīre",
+      "conjugation": "4",
+      "passive": true
+    },
+    "sentio": {
+      "headword": "sentiō",
+      "infinitive": "sentīre",
+      "conjugation": "4",
+      "passive": true
+    },
+    "venio": {
+      "headword": "veniō",
+      "infinitive": "venīre",
+      "conjugation": "4",
+      "passive": false
+    }
+  }
+}

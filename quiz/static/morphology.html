@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Declension &amp; conjugation · Latin quiz</title>
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/tabs.css">
+<link rel="stylesheet" href="/morphology.css">
+</head>
+<body>
+<header>
+  <h1>Latin Vocab Quiz</h1>
+  <p class="sub">Decline and conjugate words from your chapter notes.</p>
+</header>
+<nav class="site-tabs" aria-label="Quiz type">
+  <a href="/">Vocabulary</a>
+  <a href="/morphology.html" aria-current="page">Declension &amp; conjugation</a>
+</nav>
+<main>
+  <section id="m-setup" class="card">
+    <h2>Chapters</h2>
+    <div class="filelist-actions">
+      <button type="button" class="link" id="m-select-all">select all</button>
+      <button type="button" class="link" id="m-select-none">select none</button>
+      <button type="button" class="link" id="m-reload">reload files</button>
+    </div>
+    <div id="m-files" class="filelist">Loading…</div>
+    <h2>Entry types</h2>
+    <div class="options" id="m-kinds">
+      <label class="inline"><input type="checkbox" value="noun" checked> Noun declension</label>
+      <label class="inline"><input type="checkbox" value="adjective" checked> Adjective declension in a given gender</label>
+      <label class="inline"><input type="checkbox" value="verb" checked> Verb conjugation and infinitive</label>
+      <label class="inline"><input type="checkbox" value="pair" checked> Noun + agreeing adjective</label>
+    </div>
+    <h2>Forms</h2>
+    <div class="options">
+      <label class="inline">Verb voice
+        <select id="m-voice"><option value="mixed">Active or passive</option><option value="active">Active only</option><option value="passive">Passive only</option></select>
+      </label>
+      <p class="hint m-tight">Present indicative only, with the matching present infinitive. Verbs without a full personal passive paradigm are offered in the active voice only.</p>
+      <label class="inline">Adjectives alone
+        <select id="m-gender"><option value="mixed">Any given gender</option><option value="m">Masculine</option><option value="f">Feminine</option><option value="n">Neuter</option></select>
+      </label>
+      <p class="hint m-tight">In pairs, the adjective always agrees with the noun's gender, case and number.</p>
+    </div>
+    <h2>Options</h2>
+    <div class="options">
+      <label class="inline">Number of entries <input type="number" id="m-count" min="1" max="500" value="10"></label>
+      <label class="inline"><input type="checkbox" id="m-exhaustive"> Exhaustive <span class="hint">(every eligible word for each selected entry type)</span></label>
+      <label class="inline"><input type="checkbox" id="m-shuffle" checked> Shuffle order <span class="hint">(off = chapter order within each entry type)</span></label>
+    </div>
+    <p class="hint">A declension covers all six cases in singular and plural; plural-only nouns have no singular answers. Exhaustive pairs cover every eligible noun and adjective, reusing words from the shorter list.</p>
+    <p id="m-pool" class="poolinfo" aria-live="polite"></p>
+    <details id="m-exclusions" hidden><summary id="m-exclusion-title"></summary><ul id="m-exclusion-list" class="hint"></ul></details>
+    <div class="buttons"><button type="button" id="m-start" class="primary" disabled>Start quiz</button></div>
+    <p id="m-setup-error" class="error" role="alert" hidden></p>
+  </section>
+  <section id="m-quiz" class="card" hidden>
+    <div class="quizhead"><h2 id="m-title">Question sheet</h2><button type="button" class="link" id="m-abandon">start over</button></div>
+    <form id="m-form"></form>
+    <button type="button" class="primary" id="m-submit">Submit answers</button>
+    <p class="hint">Macrons are optional. Enter moves to the next box; Ctrl+Enter submits the sheet.</p>
+    <p id="m-quiz-error" class="error" role="alert" hidden></p>
+  </section>
+  <section id="m-results" class="card" hidden>
+    <div class="quizhead"><h2>Results</h2><button type="button" class="link" id="m-again">new quiz</button></div>
+    <div id="m-score"></div>
+    <div class="buttons"><button type="button" id="m-retest" class="primary" hidden></button></div>
+    <p id="m-results-error" class="error" role="alert" hidden></p>
+    <div id="m-result-list"></div>
+  </section>
+</main>
+<script src="/morphology.js"></script>
+</body>
+</html>

@@ -199,9 +199,95 @@ What differs is the shell around them:
 - **Install.** The plain server needs nothing but Python; Streamlit needs the
   package installed.
 
+## Declension and conjugation tab (plain server)
+
+The **Declension & conjugation** tab is a separate page at `/morphology.html`.
+The vocabulary quiz, its settings, printing and retest interface keep their
+existing behavior. No extra package or network connection is needed.
+
+Select chapters and any of four entry types:
+
+- A noun's six cases in singular and plural.
+- An adjective's six cases in a specified gender, singular and plural.
+- A six-person present active or passive indicative, plus the present
+  infinitive in the same voice.
+- A noun and an adjective declined together, agreeing in gender, case and
+  number. Enter both words in each cell; either word order is accepted.
+
+**Number of entries** counts whole tables, not individual cells. Random draws
+use the vocabulary quiz's sampling rule: sample without replacement until
+the pool is exhausted, then repeat if more entries were requested. Each
+adjective entry gets one gender and each verb entry gets one supported voice;
+the selectors can restrict these choices.
+
+**Exhaustive** covers every eligible chapter entry once per selected type.
+For pairs it covers every eligible noun and adjective at least once, cycling
+the shorter list instead of testing every possible combination. If standalone
+nouns/adjectives and pairs are both selected, words also appear in their
+standalone tables. With shuffle off, entries follow chapter order
+within each type. Only words from the selected chapters can be drawn; a
+local lexicon supplies metadata for those words, including early chapter
+forms such as `amat` → `amō`.
+
+Each available cell is graded individually. A table counts as correct only
+if every available cell is correct. Missing or wrong macrons are flagged but
+count as correct. **Retest the N I missed** repeats the whole missed tables
+with the same adjective gender, verb voice, and noun–adjective pair. Exact
+repeats of the same missed problem are retested once. Retests use the original
+answer key even if a chapter is edited mid-session.
+
+Plural-only nouns have disabled singular cells. Common-gender nouns are given
+an explicit gender for each problem. Verbs whose chapter sense lacks a full
+personal passive paradigm are offered only in the active voice; passive-only
+draws exclude them. This includes `sum`, `possum`, `soleō`, intransitive senses,
+and `dō`, whose first-person passive is absent from the reference paradigm.
+
+The current chapters supply 72 supported noun entries, 13 adjectives and 49
+verb entries. The unavailable-entry disclosure identifies phrases and
+incomplete dictionary entries rather than silently inventing their forms.
+Regular new words can be added in the usual chapter format. Extra inflection
+metadata, exceptions, variants and complete irregular answer tables go in
+**`morphology.json` in the chapter folder**, independently of Python code.
+Changes apply to the next quiz or pool refresh without restarting the server.
+The generator supports all five noun declensions, first/second- and
+third-declension adjectives, and the four regular verb conjugations including
+third-conjugation `-iō` verbs. Ambiguous classes still need explicit metadata;
+full custom tables can represent further irregular patterns.
+See [Adding vocabulary and answer keys](MORPHOLOGY.md) for definitions and
+copyable examples. Regular verbs with a macronized `-āre`, `-ēre` or `-īre`
+infinitive can be recognized directly for active quizzes; an explicit lexical
+definition enables their personal passive.
+For unreviewed vocabulary, macrons are accepted without issuing quantity
+corrections. Comparative/superlative adjectives and locatives are not part of
+this six-case tester.
+
+Answer generation uses local stems, endings, lexical restrictions and
+exceptions. The reference rules and fixtures follow Allen & Greenough,
+available through Dickinson College Commentaries:
+
+- [Number and case](https://dcc.dickinson.edu/grammar/latin/number-and-case)
+- [Third-declension i-stem forms](https://dcc.dickinson.edu/grammar/latin/3rd-declension-summary-i-stem-forms)
+- [First/second-declension adjectives](https://dcc.dickinson.edu/grammar/latin/1st-and-2nd-declension-adjectives-%C4%81-o-stems)
+- [Present verb endings](https://dcc.dickinson.edu/sites/default/files/verb_personal_endings_pres.pdf)
+- [The irregular present of dō](https://dcc.dickinson.edu/sites/default/files/d%C5%8D_d%C4%83re_pres.pdf)
+- [Impersonal passives](https://dcc.dickinson.edu/grammar/latin/impersonal-verbs)
+
+Run the reference-form, grading/retest, selection and HTTP regression tests:
+
+```sh
+python -B -m unittest discover -s quiz -p 'test_*.py'
+```
+
 ## Files
 
 - `vocab.py` — markdown parsing, question building, grading (shared)
+- `morphology.py` — local morphology answer keys, table generation and grading
+- `morphology_data.py` — validates and loads lexical definitions and overrides
+- `morphology_lexicon.json` — bundled dictionary forms, classes and exceptions
+- `../morphology.json` — personal additions and answer-key overrides, reloaded live
+- `MORPHOLOGY.md` — guide to extending answer keys for future chapters
+- `test_morphology.py` — reference paradigms and HTTP regression tests
+- `test_morphology_extensions.py` — new classes, custom tables and live reload tests
 - `streamlit_app.py` — the Streamlit front end
 - `sheet.py` — builds the downloadable worksheet as one self-contained file
 - `server.py` — the plain HTTP server and its JSON API
