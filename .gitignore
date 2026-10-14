@@ -1,5 +1,6 @@
 __pycache__/
 *.pyc
+.venv/
 
 # Obsidian per-machine state; the vault's own settings are worth keeping.
 .obsidian/workspace.json

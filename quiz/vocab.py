@@ -28,6 +28,7 @@ import re
 import unicodedata
 from collections.abc import Iterable
 from dataclasses import dataclass, field
+from os import walk
 from pathlib import Path
 
 # --------------------------------------------------------------------------
@@ -237,15 +238,14 @@ def parse_file(path: Path, vault: Path) -> list[Entry]:
 
 
 def find_markdown_files(vault: Path) -> list[Path]:
-    skip = {".obsidian", ".trash", ".git", "quiz"}
+    skip = {".obsidian", ".trash", ".git", ".venv", "quiz"}
     out = []
-    for p in sorted(vault.rglob("*.md")):
-        if any(part in skip for part in p.relative_to(vault).parts[:-1]):
-            continue
-        if p.parent.name == "quiz":
-            continue
-        out.append(p)
-    return out
+    for directory, folders, files in walk(vault):
+        # Prune before walking: installed packages and repository internals
+        # contain many files and are not chapter notes.
+        folders[:] = [name for name in folders if name not in skip]
+        out.extend(Path(directory) / name for name in files if name.lower().endswith(".md"))
+    return sorted(out)
 
 
 def load_vault(vault: Path) -> dict[str, list[Entry]]:

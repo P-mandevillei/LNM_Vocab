@@ -3,8 +3,8 @@
 Run locally:      streamlit run quiz/streamlit_app.py
 Deploy:           point Streamlit Community Cloud at this file in the repo.
 
-All the parsing, question building and grading lives in vocab.py, which this
-shares with the plain-Python server (server.py); this module is only the UI.
+Parsing, question building and grading are shared with the plain-Python server
+through vocab.py and morphology.py; these Streamlit modules are only the UI.
 Chapter markdown is read from the folder above this one, or from $LATIN_VAULT.
 """
 
@@ -20,6 +20,7 @@ from streamlit.components.v1 import html as html_component
 
 import vocab
 from sheet import MODE_LABEL, render_sheet
+from streamlit_morphology import render as morphology_tab
 
 HERE = Path(__file__).resolve().parent
 VAULT = Path(os.environ.get("LATIN_VAULT") or HERE.parent).resolve()
@@ -93,8 +94,10 @@ def vault_stamp() -> tuple:
 
 
 @st.cache_data(show_spinner=False)
-def load_chapters(_stamp: tuple) -> dict[str, list[vocab.Entry]]:
-    return vocab.load_vault(VAULT)
+def load_chapters(stamp: tuple, vault_path: str) -> dict[str, list[vocab.Entry]]:
+    # Underscore-prefixed arguments are excluded from Streamlit cache keys.
+    # Include both the chapter stamp and vault path so edits/new vaults reload.
+    return vocab.load_vault(Path(vault_path))
 
 
 def pool_for(chapters: dict, files: list[str]) -> list[vocab.Entry]:
@@ -414,19 +417,23 @@ def main() -> None:
         st.error(f"No chapter folder at {VAULT}. Set $LATIN_VAULT to point at it.")
         return
 
-    chapters = load_chapters(vault_stamp())
+    chapters = load_chapters(vault_stamp(), str(VAULT))
     if not chapters:
         st.error(f"No chapter markdown files found in {VAULT}.")
         return
 
     opts = sidebar(chapters)
-    view = st.session_state.view
-    if view == "quiz" and st.session_state.quiz:
-        quiz_view()
-    elif view == "results" and st.session_state.results:
-        results_view(chapters)
-    else:
-        setup_view(chapters, opts)
+    vocabulary, morphology = st.tabs(["Vocabulary", "Declension & conjugation"])
+    with vocabulary:
+        view = st.session_state.view
+        if view == "quiz" and st.session_state.quiz:
+            quiz_view()
+        elif view == "results" and st.session_state.results:
+            results_view(chapters)
+        else:
+            setup_view(chapters, opts)
+    with morphology:
+        morphology_tab(chapters, opts, VAULT)
 
 
 main()

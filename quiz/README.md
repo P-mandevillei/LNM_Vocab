@@ -1,8 +1,8 @@
 # Latin vocab quiz
 
 Turns the chapter notes in this vault into random question sheets. There are
-two front ends over the same engine (`vocab.py` — parsing, question building
-and grading), so both behave identically:
+two front ends over the same engines (`vocab.py` for vocabulary and
+`morphology.py` for declension/conjugation, question building and grading):
 
 | | run it with | good for |
 | --- | --- | --- |
@@ -20,6 +20,15 @@ It opens <http://localhost:8501>. Chapters come from the folder above `quiz/`,
 or from `$LATIN_VAULT` if that is set. Editing a chapter is picked up
 automatically; **Reload** in the sidebar forces a re-read.
 
+Both **Vocabulary** and **Declension & conjugation** tabs are available in
+Streamlit. They share the sidebar's chapter selection, question count,
+Exhaustive and Shuffle order. The morphology tab has its own entry-type,
+verb-voice and adjective-gender selectors. Vocabulary Mode and Also test
+parsing apply only to the vocabulary tab. Each tab keeps its own quiz, results
+and missed entries, so starting or retesting one does not replace the other.
+Morphology tables use the same chapter 10 definitions, live `morphology.json`
+overrides and original-answer retesting as the plain server.
+
 ## Deploying to Streamlit Community Cloud
 
 The repo is already set up for it — `requirements.txt` and `.streamlit/` sit at
@@ -34,6 +43,12 @@ Two things to know. The chapters are baked in at push time, so a new chapter is
 only asked about after you commit and push it — the Obsidian Git plugin can do
 that for you. And a deployed app is reachable by anyone with the link unless
 you restrict it to invited emails in the app's settings.
+
+For an existing deployment, commit and push the updated Streamlit files to
+the branch selected by the app. Rebooting the cloud app runs that deployed
+branch; it does not pick up unpushed local changes. Keep `quiz/streamlit_app.py`
+as the main file and include `quiz/streamlit_morphology.py`, the morphology
+engine/data files and chapter files in the same repository.
 
 ## Running the plain server
 
@@ -303,7 +318,9 @@ python -B -m unittest discover -s quiz -p 'test_*.py'
 - `test_morphology.py` — reference paradigms and HTTP regression tests
 - `test_morphology_extensions.py` — new classes, custom tables and live reload tests
 - `test_morphology_ch10.py` — every chapter 10 table, agreement and HTTP workflow
+- `test_streamlit.py` — Streamlit tabs, forms, independent sessions, grading/retesting and reloads
 - `streamlit_app.py` — the Streamlit front end
+- `streamlit_morphology.py` — the Streamlit morphology tab over the shared engine
 - `sheet.py` — builds the downloadable worksheet as one self-contained file
 - `server.py` — the plain HTTP server and its JSON API
 - `static/` — the plain server's pages (`index.html`/`app.js`/`style.css`,
