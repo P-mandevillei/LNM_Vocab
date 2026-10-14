@@ -1,0 +1,2 @@
+# Optional native certificate trust for the build-time HTTPS importer.
+truststore>=0.10

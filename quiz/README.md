@@ -224,16 +224,24 @@ Select chapters and any of four entry types:
 
 - A noun's six cases in singular and plural.
 - An adjective's six cases in a specified gender, singular and plural.
-- A six-person present active or passive indicative, plus the present
-  infinitive in the same voice.
+- A verb conjugation chosen from multiple voices (active/passive), six tenses
+  and three moods (indicative/subjunctive/imperative), plus an infinitive in
+  the same voice. Present indicative in both voices remains the default.
 - A noun and an adjective declined together, agreeing in gender, case and
   number. Enter both words in each cell; either word order is accepted.
 
 **Number of entries** counts whole tables, not individual cells. Random draws
 use the vocabulary quiz's sampling rule: sample without replacement until
 the pool is exhausted, then repeat if more entries were requested. Each
-adjective entry gets one gender and each verb entry gets one supported voice;
-the selectors can restrict these choices.
+adjective entry gets one gender and each verb entry gets one supported
+voice/tense/mood combination chosen from the selections. Exhaustive refers
+to words, not every combination. The infinitive is perfect for perfect,
+pluperfect and future perfect tables, and present otherwise. Unsupported
+combinations are skipped; nonexistent imperative persons are disabled.
+
+The question shows one lemma per word, including one lemma for each word in
+a pair. Translations and full dictionary entries appear only on the answers
+page. Answer sources and warnings are withheld until submission.
 
 **Exhaustive** covers every eligible chapter entry once per selected type.
 For pairs it covers every eligible noun and adjective at least once, cycling
@@ -247,7 +255,7 @@ forms such as `amat` → `amō`.
 Each available cell is graded individually. A table counts as correct only
 if every available cell is correct. Missing or wrong macrons are flagged but
 count as correct. **Retest the N I missed** repeats the whole missed tables
-with the same adjective gender, verb voice, and noun–adjective pair. Exact
+with the same adjective gender, verb voice/tense/mood, and noun–adjective pair. Exact
 repeats of the same missed problem are retested once. Retests use the original
 answer key even if a chapter is edited mid-session.
 
@@ -286,6 +294,32 @@ definition enables their personal passive.
 For unreviewed vocabulary, macrons are accepted without issuing quantity
 corrections. Comparative/superlative adjectives and locatives are not part of
 this six-case tester.
+
+The [incremental table importer](IMPORT_MORPHOLOGY.md) fetches new
+vocabulary before deployment and caches source responses and parsed tables.
+Subsequent runs reuse existing words. The v1 lexicon and personal overrides
+are retained. The tester reads ready cached tables independently of the v1
+loader's approval workflow. No quiz or grading operation calls the API.
+
+Each cell uses this policy:
+
+1. A form explicitly listed in that chapter entry takes precedence. Its exact
+   spelling is the answer, with the existing optional-macron policy. Noun
+   nominatives/genitives, adjective gender forms (or nominative/genitive for
+   one-termination adjectives), and applicable verb principal parts are mapped
+   to their own grammatical cells. Other cells are not overridden by inference.
+2. Otherwise, either a rule-generated or imported spelling is accepted. A
+   missing rule adds no check; cached forms alone can supply the answer.
+3. The answers page displays the accepted answer, each available source, and
+   **⚠** whenever rule/importer spelling variant sets differ, even when they
+   overlap or a chapter form takes precedence. Provider quantity marks are
+   audit data, not trusted macron corrections. Pair components follow this
+   policy independently, and valid forms from different schemes can be combined.
+
+The rule engine currently supplies declensions and present indicative;
+additional finite tenses/moods come from the cache. Some perfect-system
+passive tables are abbreviated by the source and remain unparsed, so those
+combinations are unavailable. See [the source audit](data/MORPHOLOGY_AUDIT.md).
 
 Answer generation uses local stems, endings, lexical restrictions and
 exceptions. The reference rules and fixtures follow Allen & Greenough,

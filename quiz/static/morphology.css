@@ -40,3 +40,5 @@ button:disabled { opacity: 0.55; cursor: wait; }
   .m-table input.answer { padding: 0.4rem 0.25rem; font-size: 0.88rem; }
   .m-table .m-cell { padding: 0.35rem 0.3rem; font-size: 0.86rem; }
 }
+.m-source { display:block; font-size:.85em; margin-top:.2rem; }
+#m-setup fieldset { border:1px solid #aaa6; border-radius:6px; padding:.5rem; }

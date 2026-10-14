@@ -203,7 +203,7 @@ def _merge(base, patch):
     return result
 
 
-def load_lexicon(vault: Path | None = None, *, include_custom=True) -> Lexicon:
+def load_lexicon(vault: Path | None = None, *, include_custom=True, include_cache=True) -> Lexicon:
     """Read once per new draw, so changes apply without restarting the server."""
     paths = [HERE / "morphology_lexicon.json"]
     custom = (vault if vault is not None else HERE.parent) / "morphology.json"
@@ -211,6 +211,15 @@ def load_lexicon(vault: Path | None = None, *, include_custom=True) -> Lexicon:
         paths.append(custom)
     records = {"nouns": {}, "adjectives": {}, "verbs": {}}
     locations = {}
+    cache_only = set()
+    if include_cache:
+        from morphology_cache import DEFAULT_CACHE, approved_legacy_records
+        cache_path = (vault / "morphology_cache.json") if vault and (vault / "morphology_cache.json").exists() else DEFAULT_CACHE
+        for category, additions in approved_legacy_records(cache_path).items():
+            for key, record in additions.items():
+                records[category][key] = record
+                locations[category, key] = f"{cache_path}: {category}.{key}"
+                cache_only.add((category, key))
     for path in paths:
         data = _read(path)
         for category in records:
@@ -226,7 +235,14 @@ def load_lexicon(vault: Path | None = None, *, include_custom=True) -> Lexicon:
                 seen.add(key)
                 if not isinstance(record, dict):
                     _fail(where, "expected an object of lexical settings")
-                records[category][key] = _merge(records[category].get(key, {}), record)
+                # Bundled reviewed definitions wholly replace a cached record;
+                # otherwise cached custom paradigms could survive a deep merge
+                # and override the regular generator's reviewed answers.
+                replaces_rule = record.get("declension", "custom") != "custom" or str(record.get("conjugation", "custom")) != "custom"
+                base = {} if path == paths[0] or ((category, key) in cache_only and replaces_rule) else records[category].get(key, {})
+                records[category][key] = _merge(base, record)
+                if path == paths[0]:
+                    cache_only.discard((category, key))
                 locations[category, key] = where
     nouns = {key: _nominal(rec, "noun", locations["nouns", key]) for key, rec in records["nouns"].items()}
     adjectives = {key: _nominal(rec, "adjective", locations["adjectives", key])

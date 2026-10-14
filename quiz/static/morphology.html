@@ -35,10 +35,24 @@
     </div>
     <h2>Forms</h2>
     <div class="options">
-      <label class="inline">Verb voice
-        <select id="m-voice"><option value="mixed">Active or passive</option><option value="active">Active only</option><option value="passive">Passive only</option></select>
-      </label>
-      <p class="hint m-tight">Present indicative only, with the matching present infinitive. Verbs without a full personal passive paradigm are offered in the active voice only.</p>
+      <fieldset id="m-voices"><legend>Verb voices</legend>
+        <label class="inline"><input type="checkbox" value="active" checked> Active</label>
+        <label class="inline"><input type="checkbox" value="passive" checked> Passive</label>
+      </fieldset>
+      <fieldset id="m-tenses"><legend>Verb tenses</legend>
+        <label class="inline"><input type="checkbox" value="present" checked> Present</label>
+        <label class="inline"><input type="checkbox" value="imperfect"> Imperfect</label>
+        <label class="inline"><input type="checkbox" value="future"> Future</label>
+        <label class="inline"><input type="checkbox" value="perfect"> Perfect</label>
+        <label class="inline"><input type="checkbox" value="pluperfect"> Pluperfect</label>
+        <label class="inline"><input type="checkbox" value="future_perfect"> Future perfect</label>
+      </fieldset>
+      <fieldset id="m-moods"><legend>Verb moods</legend>
+        <label class="inline"><input type="checkbox" value="indicative" checked> Indicative</label>
+        <label class="inline"><input type="checkbox" value="subjunctive"> Subjunctive</label>
+        <label class="inline"><input type="checkbox" value="imperative"> Imperative</label>
+      </fieldset>
+      <p class="hint m-tight">Each verb gets one supported combination from your selections. Unavailable combinations are skipped; unavailable persons are disabled. The infinitive has the same voice: perfect for perfect-system tenses, present otherwise.</p>
       <label class="inline">Adjectives alone
         <select id="m-gender"><option value="mixed">Any given gender</option><option value="m">Masculine</option><option value="f">Feminine</option><option value="n">Neuter</option></select>
       </label>

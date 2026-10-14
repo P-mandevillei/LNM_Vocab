@@ -27,7 +27,8 @@
     return {
       files: [...document.querySelectorAll('#m-files input:checked')].map((c) => c.value),
       kinds: [...document.querySelectorAll('#m-kinds input:checked')].map((c) => c.value),
-      voice: $('#m-voice').value,
+      ...Object.fromEntries(['voices', 'tenses', 'moods'].map((name) =>
+        [name, [...document.querySelectorAll(`#m-${name} input:checked`)].map((c) => c.value)])),
       gender: $('#m-gender').value,
       count: parseInt($('#m-count').value, 10) || 10,
       exhaustive: $('#m-exhaustive').checked,
@@ -58,7 +59,8 @@
     const revision = ++poolRevision;
     const opts = settings();
     $('#m-count').disabled = opts.exhaustive;
-    $('#m-voice').disabled = !opts.kinds.includes('verb');
+    document.querySelectorAll('#m-voices input, #m-tenses input, #m-moods input')
+      .forEach((control) => { control.disabled = !opts.kinds.includes('verb'); });
     $('#m-gender').disabled = !opts.kinds.includes('adjective');
     $('#m-start').disabled = true;
     $('#m-pool').textContent = 'Checking available entries…';
@@ -141,9 +143,12 @@
     const verdict = verdicts[field.verdict];
     const cell = node('div', `m-cell ${verdict.cls}`);
     cell.append(node('span', 'mark', verdict.mark), node('span', '', field.given || '(blank)'));
-    if (field.verdict !== 'correct') {
-      cell.append(node('span', 'm-correction', field.answer));
-      if (field.verdict === 'macrons') cell.append(node('span', 'note', 'macrons missing / wrong'));
+    cell.append(node('span', 'm-correction', `Answer: ${field.answer}`));
+    if (field.verdict === 'macrons') cell.append(node('span', 'note', 'macrons missing / wrong'));
+    if (field.disagreement) cell.append(node('span', 'm-correction', '⚠ Rule and importer spellings differ.'));
+    if (field.chapter_precedence) cell.append(node('span', 'note', 'Chapter form takes precedence.'));
+    for (const [name, forms] of Object.entries(field.answer_sources || {})) {
+      cell.append(node('span', 'm-source', `${name}: ${forms.join(' / ')}`));
     }
     cell.setAttribute('aria-label', `${field.label}: ${field.verdict}. You: ${field.given || 'blank'}. Answer: ${field.answer}`);
     return cell;
@@ -188,7 +193,7 @@
     const head = node('div', 'qhead');
     head.append(node('span', 'qnum', `${q.index + 1}.`), node('span', 'qlabel', q.prompt_label),
       node('span', 'chip', labels[q.kind]), node('span', 'chip subtle', q.source.replaceAll('.md', '')));
-    item.append(head, node('div', 'prompt latin', q.prompt), node('div', 'hint', q.meaning));
+    item.append(head, node('div', 'prompt latin', q.prompt));
     for (const note of q.notes) item.append(node('p', 'hint', note));
     item.append(table(q, review));
     const inf = q.fields.find((field) => field.key === 'infinitive');
@@ -290,7 +295,7 @@
       save(); refreshPool();
     });
   }
-  document.querySelectorAll('#m-kinds input, #m-voice, #m-gender, #m-exhaustive, #m-shuffle')
+  document.querySelectorAll('#m-kinds input, #m-voices input, #m-tenses input, #m-moods input, #m-gender, #m-exhaustive, #m-shuffle')
     .forEach((control) => control.addEventListener('change', () => { save(); refreshPool(); }));
   $('#m-count').addEventListener('input', () => { save(); refreshPool(); });
   document.addEventListener('keydown', (event) => {
@@ -305,7 +310,12 @@
   });
 
   const saved = prefs();
-  for (const name of ['voice', 'gender', 'count']) if (saved[name] !== undefined) $(`#m-${name}`).value = saved[name];
+  for (const name of ['gender', 'count']) if (saved[name] !== undefined) $(`#m-${name}`).value = saved[name];
+  if (!saved.voices && saved.voice) saved.voices = saved.voice === 'mixed' ? ['active', 'passive'] : [saved.voice];
+  for (const name of ['voices', 'tenses', 'moods']) {
+    if (Array.isArray(saved[name])) document.querySelectorAll(`#m-${name} input`)
+      .forEach((cb) => { cb.checked = saved[name].includes(cb.value); });
+  }
   for (const name of ['exhaustive', 'shuffle']) if (saved[name] !== undefined) $(`#m-${name}`).checked = saved[name];
   if (Array.isArray(saved.kinds)) document.querySelectorAll('#m-kinds input').forEach((cb) => { cb.checked = saved.kinds.includes(cb.value); });
   loadFiles();

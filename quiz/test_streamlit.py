@@ -43,7 +43,10 @@ class StreamlitMorphology(unittest.TestCase):
         app.checkbox(key="exhaustive").set_value(opts.get("exhaustive", True))
         app.checkbox(key="shuffle").set_value(False)
         app.multiselect(key="morph_kinds").set_value(opts.get("kinds", ["noun", "adjective", "verb", "pair"]))
-        app.selectbox(key="morph_voice").set_value(opts.get("voice", "mixed"))
+        voice = opts.get("voice", "mixed")
+        app.multiselect(key="morph_voices").set_value(opts.get("voices", ["active", "passive"] if voice == "mixed" else [voice]))
+        app.multiselect(key="morph_tenses").set_value(opts.get("tenses", ["present"]))
+        app.multiselect(key="morph_moods").set_value(opts.get("moods", ["indicative"]))
         app.selectbox(key="morph_gender").set_value(opts.get("gender", "mixed"))
         app.run()
         self.healthy(app)
@@ -102,7 +105,7 @@ class StreamlitMorphology(unittest.TestCase):
         self.fill_morphology(app, strip_macrons=True)
         self.click(app, "Submit morphology answers")
         self.assertEqual(app.session_state["morph_results"]["score"]["missed"], 0)
-        self.assertEqual(app.selectbox(key="morph_voice").value, "passive")
+        self.assertEqual(app.multiselect(key="morph_voices").value, ["passive"])
 
     def test_given_gender_plural_only_cells_and_agreement(self):
         app = self.app(kinds=["adjective", "pair"], gender="n")
@@ -132,6 +135,44 @@ class StreamlitMorphology(unittest.TestCase):
         app.multiselect(key="morph_kinds").set_value([]).run()
         self.healthy(app)
         self.assertTrue(any("Select at least one entry type" in item.value for item in app.info))
+
+    def test_cached_tense_mood_and_multiselect_preferences(self):
+        app = self.app(kinds=["verb"], voices=["active"], tenses=["imperfect"], moods=["subjunctive"])
+        app.button(key="morph_start").click().run()
+        self.healthy(app)
+        qs = app.session_state["morph_quiz"]
+        self.assertEqual(len(qs), 7)
+        self.assertTrue(all(q["prompt_label"] == "Imperfect active subjunctive" for q in qs))
+        self.assertTrue(all("rule" not in q["fields"][0]["answer_sources"] for q in qs))
+        self.fill_morphology(app)
+        self.click(app, "Submit morphology answers")
+        self.assertEqual(app.session_state["morph_results"]["score"]["missed"], 0)
+        app.button(key="morph_new").click().run()
+        app.multiselect(key="morph_tenses").set_value(["present", "perfect"]).run()
+        app.multiselect(key="morph_moods").set_value(["indicative", "subjunctive"]).run()
+        self.healthy(app)
+        self.assertEqual(app.multiselect(key="morph_tenses").value, ["present", "perfect"])
+        self.assertEqual(app.multiselect(key="morph_moods").value, ["indicative", "subjunctive"])
+        app.multiselect(key="morph_moods").set_value([]).run()
+        self.assertTrue(any("valid verb moods" in item.value for item in app.error))
+
+    def test_dictionary_and_disagreements_are_shown_only_in_results(self):
+        app = self.app(kinds=["adjective"], gender="n")
+        app.button(key="morph_start").click().run()
+        self.healthy(app)
+        qs = app.session_state["morph_quiz"]
+        self.assertTrue(all("," not in q["prompt"] for q in qs))
+        shown = " ".join(item.value for item in [*app.markdown, *app.caption])
+        self.assertNotIn("fortunate", shown)
+        self.assertNotIn("felicis", shown)
+        self.assertNotIn("Rule and importer", shown)
+        self.fill_morphology(app)
+        self.click(app, "Submit morphology answers")
+        shown = " ".join(item.value for item in [*app.markdown, *app.caption])
+        self.assertIn("fortunate", shown)
+        self.assertIn("felicis", shown)
+        self.assertIn("⚠ Rule and importer spellings differ.", shown)
+        self.assertIn("Chapter form takes precedence.", shown)
 
     def test_vocabulary_workflow_and_independent_sessions(self):
         app = self.app(exhaustive=False, kinds=["verb"], voice="active")

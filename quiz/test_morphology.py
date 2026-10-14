@@ -189,7 +189,8 @@ class QuestionsAndGrading(unittest.TestCase):
                                 m.options({"kinds": ["pair"], "exhaustive": True}), random.Random(seed))
             q = data["questions"][0]
             expected = "bonus" if q["gender"] == "m" else "bona"
-            self.assertEqual(q["fields"][0]["answer"], f"cīvis {expected}")
+            self.assertEqual(q["fields"][0]["answer"], f"civis {expected}")
+            self.assertTrue(q["fields"][0]["chapter_precedence"])
 
     def test_only_selected_chapter_words_are_used(self):
         pool = vocab.load_vault(VAULT)["ch1.md"]
@@ -285,7 +286,7 @@ class HTTPIntegration(unittest.TestCase):
         def assert_no_answers(obj):
             if isinstance(obj, dict):
                 for key, value in obj.items():
-                    self.assertNotIn(key, ("answer", "accepted", "strict", "identity"))
+                    self.assertNotIn(key, ("answer", "accepted", "strict", "identity", "meaning", "full_entry", "answer_sources", "disagreement"))
                     assert_no_answers(value)
             elif isinstance(obj, list):
                 for item in obj:
@@ -313,6 +314,19 @@ class HTTPIntegration(unittest.TestCase):
         self.request('/api/grade', {"id": "expired"}, expected=400)
         data = self.request('/api/morphology/pool', {"files": ["ch4.md"], "kinds": ["noun"]})
         self.assertEqual(data['pool'], 6)
+
+    def test_cached_tense_and_mood_api_and_answer_page_sources(self):
+        opts = {"files": ["ch10.md"], "kinds": ["verb"], "voices": ["active"],
+                "tenses": ["imperfect"], "moods": ["subjunctive"], "exhaustive": True}
+        data = self.request('/api/morphology/quiz', opts)
+        self.assertEqual(data["pool"], 7)
+        self.assertTrue(all(q["prompt_label"] == "Imperfect active subjunctive" for q in data["questions"]))
+        qs = server.QUIZZES[data["id"]]["questions"]
+        grade = self.request('/api/grade', {"id": data["id"], "answers": full_answers(qs)})
+        self.assertEqual(grade["score"]["missed"], 0)
+        self.assertTrue(all(set(q["fields"][0]["answer_sources"]) == {"importer"} for q in grade["results"]))
+        self.assertTrue(all(" – " in q["full_entry"] for q in grade["results"]))
+        self.request('/api/morphology/pool', {**opts, "moods": []}, expected=400)
 
     def test_vocabulary_quiz_print_and_retest_still_work(self):
         self.assertTrue({f"ch{i}.md" for i in range(1, 9)}.issubset(

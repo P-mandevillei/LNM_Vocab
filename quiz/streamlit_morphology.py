@@ -18,7 +18,6 @@ KIND_LABELS = {
     "verb": "Verb conjugation and infinitive",
     "pair": "Noun + agreeing adjective",
 }
-VOICE_LABELS = {"mixed": "Active or passive", "active": "Active only", "passive": "Passive only"}
 GENDER_LABELS = {"mixed": "Any given gender", "m": "Masculine", "f": "Feminine", "n": "Neuter"}
 VERDICTS = {"correct": ("ok", "✓"), "macrons": ("warn", "≈"), "wrong": ("bad", "✗")}
 
@@ -34,6 +33,7 @@ CSS = """
 .morph-cell.bad { background:rgba(163,38,38,.13); }
 .morph-cell { padding:.3rem; border-radius:5px; }
 .morph-correction { display:block; font-weight:600; margin-top:.2rem; }
+.morph-source { display:block; font-size:.85em; margin-top:.2rem; }
 </style>
 """
 
@@ -60,14 +60,20 @@ def settings(shared):
                    "Vocabulary Mode and Also test parsing apply only to the Vocabulary tab.")
         kinds = st.multiselect("Entry types", list(m.KINDS), default=list(m.KINDS),
                                format_func=KIND_LABELS.get, key="morph_kinds")
-        voice = st.selectbox("Verb voice", list(VOICE_LABELS), format_func=VOICE_LABELS.get,
-                             key="morph_voice", disabled="verb" not in kinds)
+        voices = st.multiselect("Verb voices", list(m.VOICES), default=list(m.VOICES),
+                               format_func=str.title, key="morph_voices", disabled="verb" not in kinds)
+        tenses = st.multiselect("Verb tenses", list(m.TENSES), default=["present"],
+                               format_func=lambda s: s.replace("_", " ").title(),
+                               key="morph_tenses", disabled="verb" not in kinds)
+        moods = st.multiselect("Verb moods", list(m.MOODS), default=["indicative"],
+                              format_func=str.title, key="morph_moods", disabled="verb" not in kinds)
         gender = st.selectbox("Adjectives alone", list(GENDER_LABELS), format_func=GENDER_LABELS.get,
                               key="morph_gender", disabled="adjective" not in kinds)
-        st.caption("Present indicative with the matching present infinitive. "
-                   "Verbs without a full personal passive are active only. "
+        st.caption("Each verb gets one supported combination from your selections. "
+                   "Unavailable combinations are skipped; unavailable persons are disabled. "
+                   "The infinitive has the same voice: perfect for perfect-system tenses, present otherwise. "
                    "In pairs the adjective agrees with the noun's gender, case and number.")
-    return {**shared, "kinds": kinds, "voice": voice, "gender": gender}
+    return {**shared, "kinds": kinds, "voices": voices, "tenses": tenses, "moods": moods, "gender": gender}
 
 
 def setup_view(chapters, req, vault):
@@ -80,8 +86,9 @@ def setup_view(chapters, req, vault):
         return
     try:
         opts = m.options(req)
-        lexicon = m.load_lexicon(vault)
-        available, excluded, counts = m.candidates(pool, opts, lexicon=lexicon)
+        lexicon = m.load_lexicon(vault, include_cache=False)
+        sources = m.table_sources(vault)
+        available, excluded, counts = m.candidates(pool, opts, lexicon=lexicon, sources=sources)
     except ValueError as exc:
         st.error(str(exc))
         return
@@ -103,7 +110,7 @@ def setup_view(chapters, req, vault):
     if not total:
         st.info("No supported entries match these settings. Pairs need both nouns and adjectives.")
     if st.button("Start morphology quiz", key="morph_start", type="primary", disabled=not total):
-        data = m.build_quiz(pool, opts, lexicon=lexicon)
+        data = m.build_quiz(pool, opts, lexicon=lexicon, sources=sources)
         begin_quiz(data["questions"])
         st.rerun()
 
@@ -122,7 +129,6 @@ def heading(question):
         f'<span class="chip">{escape(question["source"].removesuffix(".md"))}</span></div>'
         f'<div class="prompt latin">{escape(question["prompt"])}</div>',
         unsafe_allow_html=True)
-    st.caption(question["meaning"])
     for note in question["notes"]:
         st.caption(note)
 
@@ -178,10 +184,15 @@ def result_cell(field):
         return '<span aria-label="Unavailable">—</span>'
     cls, mark = VERDICTS[field["verdict"]]
     given = escape(field["given"]) or "(blank)"
-    correction = (f'<span class="morph-correction">Answer: {escape(field["answer"])}</span>'
-                  if field["verdict"] != "correct" else "")
+    correction = f'<span class="morph-correction">Answer: {escape(field["answer"])}</span>'
     note = '<span class="note">macrons missing / wrong</span>' if field["verdict"] == "macrons" else ""
-    return f'<div class="morph-cell {cls}">{mark} {given}{correction}{note}</div>'
+    if field.get("disagreement"):
+        note += '<span class="morph-correction">⚠ Rule and importer spellings differ.</span>'
+    if field.get("chapter_precedence"):
+        note += '<span class="note">Chapter form takes precedence.</span>'
+    sources = "".join(f'<span class="morph-source">{escape(name.title())}: {escape(" / ".join(forms))}</span>'
+                      for name, forms in field.get("answer_sources", {}).items())
+    return f'<div class="morph-cell {cls}">{mark} {given}{correction}{note}{sources}</div>'
 
 
 def result_table(question):

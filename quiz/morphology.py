@@ -1,9 +1,10 @@
-"""Local, deterministic answer keys for the morphology quiz.
+"""Offline morphology quizzes with chapter, rule and imported answer schemes.
 
 Bundled and user-defined lexical data supply quantities and exceptions which
 cannot be recovered from unmacronized chapter notes. Regular inflection rules
-follow Allen & Greenough (see README.md). No network or model is used to grade.
-Unknown inflection classes are reported as unavailable, never guessed.
+follow Allen & Greenough (see README.md). Ready imported tables provide a
+second answer scheme and additional grammatical topics. No network is used
+to draw or grade a quiz. Missing forms are disabled, never guessed.
 """
 
 from __future__ import annotations
@@ -14,10 +15,15 @@ from itertools import product
 import random
 
 import vocab
+import morphology_answers as answers
+from morphology_cache import table_sources, lookup
 from morphology_data import (CASES, NUMBERS, GENDERS, Lexicon, Nominal, Verb,
                              load_lexicon)
 
 KINDS = ("noun", "adjective", "verb", "pair")
+VOICES = ("active", "passive")
+TENSES = ("present", "imperfect", "future", "perfect", "pluperfect", "future_perfect")
+MOODS = ("indicative", "subjunctive", "imperative")
 
 
 class Unavailable(ValueError):
@@ -25,7 +31,7 @@ class Unavailable(ValueError):
 
 
 # Compatibility names for the bundled data; new quizzes load vault overrides.
-_DEFAULT_LEXICON = load_lexicon(include_custom=False)
+_DEFAULT_LEXICON = load_lexicon(include_custom=False, include_cache=False)
 NOUNS = _DEFAULT_LEXICON.nouns
 ADJECTIVES = _DEFAULT_LEXICON.adjectives
 VERBS = _DEFAULT_LEXICON.verbs
@@ -253,16 +259,25 @@ def options(req: dict) -> dict:
     if voice not in ("active", "passive", "mixed") or gender not in (*GENDERS, "mixed"):
         raise ValueError("Select a valid verb voice and adjective gender.")
     count = max(1, min(int(req.get("count") or 10), 500))
-    return {"kinds": list(dict.fromkeys(kinds)), "voice": voice, "gender": gender,
+    selections = {}
+    for name, valid, default in (("voices", VOICES, list(VOICES) if voice == "mixed" else [voice]),
+                                  ("tenses", TENSES, ["present"]),
+                                  ("moods", MOODS, ["indicative"])):
+        values = req.get(name, default)
+        if not isinstance(values, list) or any(v not in valid for v in values) or ("verb" in kinds and not values):
+            raise ValueError(f"Select at least one valid verb {name} choice.")
+        selections[name] = list(dict.fromkeys(values))
+    return {"kinds": list(dict.fromkeys(kinds)), "voice": voice, "gender": gender, **selections,
             "count": count, "exhaustive": bool(req.get("exhaustive")),
             "shuffle": bool(req.get("shuffle", True))}
 
 
 def candidates(pool: list[vocab.Entry], opts: dict,
                rng: random.Random | None = None,
-               lexicon: Lexicon | None = None) -> tuple[list[dict], list[dict], dict]:
+               lexicon: Lexicon | None = None, sources=None) -> tuple[list[dict], list[dict], dict]:
     rng = rng or random.Random()
-    lexicon = lexicon or load_lexicon()
+    lexicon = lexicon or load_lexicon(include_cache=False)
+    sources = sources if sources is not None else table_sources()
     groups: dict[str, list[tuple]] = {k: [] for k in KINDS[:3]}
     excluded = []
     wanted = set(opts["kinds"])
@@ -271,16 +286,39 @@ def candidates(pool: list[vocab.Entry], opts: dict,
         if entry.pos not in relevant:
             continue
         try:
-            model = {"noun": noun_model, "adjective": adjective_model, "verb": verb_model}[entry.pos](entry, lexicon)
-            if entry.pos == "verb" and opts["voice"] == "passive" and not model.passive:
-                raise Unavailable("No supported six-person personal passive for this chapter sense.")
-            groups[entry.pos].append((entry, model))
+            try:
+                model = {"noun": noun_model, "adjective": adjective_model, "verb": verb_model}[entry.pos](entry, lexicon)
+            except Unavailable:
+                record = sources.record_for(entry)
+                if not record or (entry.pos == "noun" and not record["request"].get("genders")):
+                    raise
+                req = record["request"]
+                if entry.pos == "verb":
+                    head = vocab.normalize(entry.headword)
+                    reviewed = lexicon.verbs.get(lexicon.verb_aliases.get(head, head))
+                    # Preserve explicit restrictions for known chapter senses.
+                    # The importer's default False for an unclassified word
+                    # is not evidence that its cached passive is impossible.
+                    passive = reviewed.passive if reviewed else any(
+                        c["features"].get("voice") == "passive" and c["features"].get("mood") and c["forms"]
+                        for c in record["candidate"]["cells"].values())
+                    model = Verb(req["forms"][0], req["forms"][1] if len(req["forms"]) > 1 else "",
+                                 "cached", passive=bool(passive), quantities_known=False)
+                else:
+                    model = Nominal(tuple(req["forms"]), tuple(req.get("genders") or GENDERS), 0,
+                                    number=req.get("number"), quantities_known=False, pos=entry.pos)
+            record = sources.record_for(entry, model)
+            configurations = verb_configurations(model, record, opts) if entry.pos == "verb" else []
+            if entry.pos == "verb" and not configurations:
+                raise Unavailable("No complete cached or rule-based table matches the selected voice, tense and mood (or the chapter's passive restriction).")
+            groups[entry.pos].append((entry, model, record, configurations))
         except Unavailable as exc:
             excluded.append({"word": entry.headword, "source": entry.source, "reason": str(exc)})
     available = []
     for kind in KINDS[:3]:
         if kind in wanted:
-            available.extend({"kind": kind, "entry": e, "model": m} for e, m in groups[kind])
+            available.extend({"kind": kind, "entry": e, "model": m, "record": record,
+                              "configurations": configurations} for e, m, record, configurations in groups[kind])
     if "pair" in wanted and groups["noun"] and groups["adjective"]:
         nouns, adjectives = list(groups["noun"]), list(groups["adjective"])
         if opts["shuffle"]:
@@ -289,70 +327,99 @@ def candidates(pool: list[vocab.Entry], opts: dict,
         # Exhaustive pairs cover every eligible noun AND adjective at least
         # once, cycling the shorter list; never form a Cartesian product.
         for i in range(max(len(nouns), len(adjectives))):
-            (noun, nm), (adj, am) = nouns[i % len(nouns)], adjectives[i % len(adjectives)]
+            (noun, nm, nr, _), (adj, am, ar, _) = nouns[i % len(nouns)], adjectives[i % len(adjectives)]
             available.append({"kind": "pair", "entry": noun, "model": nm,
-                              "adjective": adj, "adjective_model": am})
+                              "record": nr, "adjective": adj, "adjective_model": am,
+                              "adjective_record": ar})
     counts = {kind: sum(c["kind"] == kind for c in available) for kind in KINDS}
     return available, excluded, counts
 
 
-def _cell(key: str, label: str, answers: list[str] | None, quantities_known: bool) -> dict:
-    accepted, strict = vocab.variant_sets(answers or [])
-    return {"key": key, "label": label, "answer": " / ".join(answers or []),
-            "accepted": accepted, "strict": strict, "disabled": answers is None,
-            "quantities_known": quantities_known}
+def rule_conjugation(model, voice, tense, mood):
+    if tense == "present" and mood == "indicative" and model.conjugation != "cached":
+        forms, infinitive = conjugate(model, voice)
+        return {f"p{person}_{number}": forms[i * 3 + person - 1]
+                for i, number in enumerate(NUMBERS) for person in range(1, 4)}, infinitive
+    return {}, []
+
+
+def verb_configurations(model, record, opts):
+    configurations = []
+    for voice, tense, mood in product(opts["voices"], opts["tenses"], opts["moods"]):
+        if voice == "passive" and not model.passive:
+            continue
+        rules, _ = rule_conjugation(model, voice, tense, mood)
+        cells = [lookup(record["candidate"], pos="verb", voice=voice, tense=tense,
+                        mood=mood, person=person, number=number) if record else None
+                 for number in NUMBERS for person in range(1, 4)]
+        if rules or (any(c and c["forms"] for c in cells) and
+                     (mood == "imperative" or all(c is not None for c in cells))):
+            configurations.append((voice, tense, mood))
+    return configurations
+
+
+def nominal_cell(entry, model, record, gender, case, number, rules):
+    restricted = model.number and number != ("plural" if model.number == "pl" else "singular")
+    features = {"pos": entry.pos, "case": case, "number": number}
+    if entry.pos == "adjective":
+        features.update(gender=gender, degree="positive")
+    return answers.cell(f"{case}_{number}", f"{case.title()} {number}",
+                        answers.chapter_nominal(entry, model, gender, case, number),
+                        rules.get((case, number), []), answers.imported(record, **features),
+                        model.quantities_known, disabled=bool(restricted))
 
 
 def question(candidate: dict, index: int, opts: dict, rng: random.Random) -> dict:
     kind, entry, model = candidate["kind"], candidate["entry"], candidate["model"]
+    record = candidate.get("record")
     q = {"index": index, "kind": kind, "source": entry.source,
-         "prompt": entry.headword, "meaning": entry.english_core,
+         "prompt": model.head if kind == "verb" else model.forms[0],
          "full_entry": f"{entry.raw_latin} – {entry.english}", "fields": [],
          "rows": [], "columns": [], "notes": [], "entry_key": entry.key}
     identity = [kind, entry.key]
     if kind == "verb":
-        voice = (rng.choice(["active", "passive"]) if model.passive else "active") if opts["voice"] == "mixed" else opts["voice"]
-        forms, inf = conjugate(model, voice)
-        q.update(prompt=model.head, prompt_label=f"Present {voice} indicative", voice=voice,
+        voice, tense, mood = rng.choice(candidate["configurations"])
+        rules, rule_inf = rule_conjugation(model, voice, tense, mood)
+        q.update(prompt_label=f"{tense.replace('_', ' ').title()} {voice} {mood}", voice=voice, tense=tense, mood=mood,
                  columns=["Singular", "Plural"], rows=["1st person", "2nd person", "3rd person"])
-        for number_i, number in enumerate(NUMBERS):
-            for person in range(3):
-                q["fields"].append(_cell(f"p{person + 1}_{number}", f"{person + 1}{'st' if person == 0 else 'nd' if person == 1 else 'rd'} person {number}",
-                                         forms[number_i * 3 + person], model.quantities_known))
-        q["fields"].append(_cell("infinitive", f"Present {voice} infinitive", inf, model.quantities_known))
-        identity.append(voice)
+        for number in NUMBERS:
+            for person in range(1, 4):
+                key = f"p{person}_{number}"
+                features = dict(voice=voice, tense=tense, mood=mood, person=person, number=number)
+                q["fields"].append(answers.cell(key, f"{person}{('st', 'nd', 'rd')[person - 1]} person {number}",
+                    answers.chapter_verb(entry, model, **features), rules.get(key, []),
+                    answers.imported(record, pos="verb", **features), model.quantities_known))
+        inf_tense = "perfect" if tense in ("perfect", "pluperfect", "future_perfect") else "present"
+        # The v1 rules supply present infinitives regardless of finite mood.
+        if inf_tense == "present" and model.conjugation != "cached":
+            _, rule_inf = conjugate(model, voice)
+        features = dict(voice=voice, tense=inf_tense, form="infinitive")
+        q["fields"].append(answers.cell("infinitive", f"{inf_tense.title()} {voice} infinitive",
+            answers.chapter_verb(entry, model, **features), rule_inf,
+            answers.imported(record, pos="verb", **features), model.quantities_known))
+        identity.extend((voice, tense, mood))
     else:
         gender = (rng.choice(list(GENDERS)) if opts["gender"] == "mixed" else opts["gender"]) if kind == "adjective" else rng.choice(model.genders)
         forms = decline(model, gender)
-        known_quantities = model.quantities_known
         q.update(gender=gender, columns=["Singular", "Plural"], rows=[c.title() for c in CASES])
         if kind == "pair":
             adj, am = candidate["adjective"], candidate["adjective_model"]
             af = decline(am, gender)
-            forms = {cell: list(dict.fromkeys(
-                phrase for n, a in product(answers, af[cell]) for phrase in (f"{n} {a}", f"{a} {n}")))
-                for cell, answers in forms.items() if cell in af}
-            # Display canonical noun-first answers, but accept either order.
             q.update(prompt=f"{model.forms[0]} + {am.forms[0]}",
-                     meaning=f"{entry.english_core} + {adj.english_core}",
                      source=" + ".join(dict.fromkeys([entry.source, adj.source])),
                      full_entry=q["full_entry"] + f"; {adj.raw_latin} – {adj.english}")
             q["notes"].append("Write the noun and adjective together in each cell; either word order is accepted.")
             identity.append(adj.key)
-            known_quantities = known_quantities and am.quantities_known
-        elif kind == "adjective":
-            q["prompt"] = ", ".join(model.forms)
-        else:
-            q["prompt"] = ", ".join(model.forms)
         q["prompt_label"] = f"Decline {'the noun and agreeing adjective' if kind == 'pair' else 'the ' + kind} · {GENDERS[gender]}"
         restriction = model.number or (am.number if kind == "pair" else None)
         if restriction:
             q["notes"].append("Plural only." if restriction == "pl" else "Singular only.")
         for case in CASES:
             for number in NUMBERS:
-                cell = _cell(f"{case}_{number}", f"{case.title()} {number}", forms.get((case, number)), known_quantities)
-                if kind == "pair" and not cell["disabled"]:
-                    cell["answer"] = " / ".join(forms[case, number][::2])
+                cell = nominal_cell(entry, model, record, gender, case, number, forms)
+                if kind == "pair":
+                    ac = nominal_cell(adj, am, candidate.get("adjective_record"), gender, case, number, af)
+                    cell = answers.pair_cell(cell["key"], cell["label"], cell, ac)
                 q["fields"].append(cell)
         identity.append(gender)
     q["identity"] = "|".join(identity)
@@ -360,9 +427,9 @@ def question(candidate: dict, index: int, opts: dict, rng: random.Random) -> dic
 
 
 def build_quiz(pool: list[vocab.Entry], opts: dict, rng: random.Random | None = None,
-               lexicon: Lexicon | None = None) -> dict:
+               lexicon: Lexicon | None = None, sources=None) -> dict:
     rng = rng or random.Random()
-    available, excluded, counts = candidates(pool, opts, rng, lexicon)
+    available, excluded, counts = candidates(pool, opts, rng, lexicon, sources)
     chosen = vocab.select_entries(available, opts["count"], opts["exhaustive"], opts["shuffle"], rng)
     if not opts["shuffle"]:
         order = {id(c): i for i, c in enumerate(available)}
@@ -373,7 +440,7 @@ def build_quiz(pool: list[vocab.Entry], opts: dict, rng: random.Random | None = 
 
 
 def public(questions: list[dict]) -> list[dict]:
-    keys = ("index", "kind", "source", "prompt", "prompt_label", "meaning", "rows", "columns", "notes")
+    keys = ("index", "kind", "source", "prompt", "prompt_label", "rows", "columns", "notes")
     return [{**{k: q[k] for k in keys},
              "fields": [{k: f[k] for k in ("key", "label", "disabled")} for f in q["fields"]]}
             for q in questions]
@@ -397,7 +464,9 @@ def grade(questions: list[dict], answers: list[dict]) -> dict:
                 field_total += 1
                 field_correct += verdict != "wrong"
             fields.append({"key": f["key"], "label": f["label"], "disabled": f["disabled"],
-                           "given": value, "answer": f["answer"], "verdict": verdict})
+                           "given": value, "answer": f["answer"], "verdict": verdict,
+                           **{key: f.get(key, default) for key, default in
+                              (("answer_sources", {}), ("disagreement", False), ("chapter_precedence", False))}})
         wrong = any(f["verdict"] == "wrong" for f in fields)
         entry_correct += not wrong
         if wrong:

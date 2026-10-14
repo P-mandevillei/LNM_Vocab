@@ -270,10 +270,11 @@ class Handler(BaseHTTPRequestHandler):
 
     def _morphology_files(self):
         opts = morphology.options({})
-        lexicon = morphology.load_lexicon(VAULT)
+        lexicon = morphology.load_lexicon(VAULT, include_cache=False)
+        sources = morphology.table_sources(VAULT)
         out = []
         for name, entries in vocab.load_vault(VAULT).items():
-            _, excluded, counts = morphology.candidates(entries, opts, lexicon=lexicon)
+            _, excluded, counts = morphology.candidates(entries, opts, lexicon=lexicon, sources=sources)
             out.append({"name": name, "by_pos": {k: counts[k] for k in
                         ("noun", "adjective", "verb")}, "excluded": len(excluded)})
         return out
@@ -282,17 +283,18 @@ class Handler(BaseHTTPRequestHandler):
         req = self._body()
         try:
             opts = morphology.options(req)
-            lexicon = morphology.load_lexicon(VAULT)
+            lexicon = morphology.load_lexicon(VAULT, include_cache=False)
+            sources = morphology.table_sources(VAULT)
         except (ValueError, TypeError) as exc:
             return self._json({"error": str(exc)}, 400)
         wanted = req.get("files") or []
         pool = [e for name, entries in vocab.load_vault(VAULT).items()
                 if name in wanted for e in entries]
         if preview:
-            available, excluded, counts = morphology.candidates(pool, opts, lexicon=lexicon)
+            available, excluded, counts = morphology.candidates(pool, opts, lexicon=lexicon, sources=sources)
             return self._json({"pool": len(available), "counts": counts,
                                "excluded": excluded})
-        data = morphology.build_quiz(pool, opts, lexicon=lexicon)
+        data = morphology.build_quiz(pool, opts, lexicon=lexicon, sources=sources)
         questions = data.pop("questions")
         if not questions:
             return self._json({"error": "No supported entries match these settings. "

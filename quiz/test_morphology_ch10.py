@@ -136,7 +136,8 @@ class Chapter10(unittest.TestCase):
                 self.assertEqual(inf, [infinitive])
                 q = self.build([self.words["verb", head]], kinds=["verb"], voice=voice)["questions"][0]
                 self.assertEqual(len(q["fields"]), 7)
-                self.assertEqual(q["fields"][-1]["answer"], infinitive)
+                self.assertEqual(q["fields"][-1]["answer"],
+                                 self.words["verb", head].latin_forms[1] if voice == "active" else infinitive)
                 if voice == "passive":
                     alternate = {"aedifico": "aedificāre", "capio": "capere", "cupio": "cupere",
                                  "deleo": "dēlēre", "moveo": "movēre"}[head]
@@ -174,7 +175,17 @@ class Chapter10(unittest.TestCase):
                     for field in q["fields"]:
                         self.assertEqual(field["disabled"], field["key"] not in expected)
                         if not field["disabled"]:
-                            self.assertEqual(field["answer"].split(" / ")[0], expected[field["key"]])
+                            # The chapter's dictionary slots override quantities
+                            # in the independent reference tables above.
+                            actual = field["answer"].split(" / ")[0]
+                            self.assertEqual(vocab.normalize(actual), vocab.normalize(expected[field["key"]]))
+                            case, number = field["key"].rsplit("_", 1)
+                            if number == "singular" and case in ("nominative", "genitive"):
+                                self.assertEqual(actual.split()[0], noun.latin_forms[0 if case == "nominative" else 1])
+                            if case == "nominative" and number == ("plural" if adjective == "pauci" else "singular"):
+                                adjective_entry = self.words["adjective", adjective]
+                                if len(adjective_entry.latin_forms) == 3:
+                                    self.assertEqual(actual.split()[1], adjective_entry.latin_forms["mfn".index(gender)])
                     answers = answers_for([q])
                     # Both noun/adjective word orders count as correct.
                     answers[0]["fields"] = {k: " ".join(reversed(v.split())) for k, v in answers[0]["fields"].items()}
