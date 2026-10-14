@@ -41,7 +41,7 @@
     <div class="options">
       <label class="inline">
         Number of questions
-        <input type="number" id="count" value="10" min="1" max="200">
+        <input type="number" id="count" value="10" min="1" max="500">
       </label>
       <label class="inline">
         <input type="checkbox" id="exhaustive">
@@ -63,6 +63,12 @@
       <button id="print" class="secondary">Printable sheet…</button>
     </div>
     <p class="error" id="setup-error" hidden></p>
+    <details class="record-controls">
+      <summary>Restore a test record</summary>
+      <label class="field">Upload test record <input id="record-upload" type="file" accept=".json,application/json"></label>
+      <p class="hint">Restore the exact test or re-test from either app. Answers and unfamiliar marks start blank.</p>
+      <p class="error" id="record-error" role="alert" hidden></p>
+    </details>
 
     <details id="printopts">
       <summary>Printable sheet options</summary>
@@ -82,6 +88,7 @@
       <h2 id="quiz-title">Question sheet</h2>
       <button type="button" class="link" id="abandon">start over</button>
     </div>
+    <button type="button" class="secondary" data-download-record>Download test record</button>
     <form id="quizform"></form>
     <button id="submit" class="primary">Submit answers</button>
     <p class="hint">Macrons are optional — you'll be told when you left one out.</p>
@@ -95,12 +102,19 @@
     </div>
     <div id="score"></div>
     <div class="buttons">
+      <label class="field">Retest entries <select id="retest-selection" aria-label="Retest entries">
+        <option value="wrong">Wrong entries only</option>
+        <option value="unfamiliar">Unfamiliar entries only</option>
+        <option value="combined">Unfamiliar + wrong entries</option>
+      </select></label>
       <button id="retest" class="primary" hidden></button>
+      <button type="button" class="secondary" data-download-record>Download test record</button>
     </div>
     <div id="resultlist"></div>
   </section>
 </main>
 
+<script src="/records.js"></script>
 <script src="/app.js"></script>
 </body>
 </html>

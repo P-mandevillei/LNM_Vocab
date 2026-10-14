@@ -146,9 +146,15 @@
     cell.append(node('span', 'm-correction', `Answer: ${field.answer}`));
     if (field.verdict === 'macrons') cell.append(node('span', 'note', 'macrons missing / wrong'));
     if (field.disagreement) cell.append(node('span', 'm-correction', '⚠ Rule and importer spellings differ.'));
-    if (field.chapter_precedence) cell.append(node('span', 'note', 'Chapter form takes precedence.'));
-    for (const [name, forms] of Object.entries(field.answer_sources || {})) {
-      cell.append(node('span', 'm-source', `${name}: ${forms.join(' / ')}`));
+    const sources = Object.entries(field.answer_sources || {});
+    if (sources.length) {
+      const details = node('details', 'm-sources');
+      details.append(node('summary', '', 'Answer sources'));
+      if (field.chapter_precedence) details.append(node('span', 'note', 'Chapter form takes precedence.'));
+      for (const [name, forms] of sources) {
+        details.append(node('span', 'm-source', `${name}: ${forms.join(' / ')}`));
+      }
+      cell.append(details);
     }
     cell.setAttribute('aria-label', `${field.label}: ${field.verdict}. You: ${field.given || 'blank'}. Answer: ${field.answer}`);
     return cell;
@@ -203,6 +209,7 @@
       item.append(box);
     }
     if (review) item.append(node('div', 'fullentry', q.full_entry));
+    else item.append(LatinRecords.unfamiliar(q.index));
     return item;
   }
 
@@ -214,7 +221,7 @@
     $('#m-title').textContent = title;
     error('#m-quiz-error');
     showView('quiz');
-    form.querySelector('input:not(:disabled)')?.focus();
+    form.querySelector('input.answer:not(:disabled)')?.focus();
   }
 
   async function start() {
@@ -236,6 +243,7 @@
     for (const answer of document.querySelectorAll('#m-form input.answer:not(:disabled)')) {
       answers[parseInt(answer.dataset.index, 10)].fields[answer.dataset.key] = answer.value;
     }
+    LatinRecords.collectUnfamiliar($('#m-form'), answers);
     return answers;
   }
 
@@ -252,12 +260,9 @@
       box.append(node('div', 'bigscore', `${score.entry_correct} / ${score.entry_total}`),
         node('div', 'hint', `entries correct · ${score.field_correct} / ${score.field_total} forms correct`));
       const retest = $('#m-retest');
-      retest.hidden = !score.missed;
-      retest.textContent = `Retest the ${score.missed} I missed`;
-      if (!score.missed) box.append(node('div', 'hint', 'Nothing to retest.'));
+      LatinRecords.retestControls($('#m-retest-selection'), retest, data.retest_counts);
       const list = $('#m-result-list');
-      list.textContent = '';
-      for (const result of data.results) list.append(card(result, true));
+      LatinRecords.review(list, data.results, (result) => card(result, true));
       error('#m-results-error');
       showView('results');
     } catch (exc) {
@@ -272,8 +277,8 @@
     $('#m-retest').disabled = true;
     error('#m-results-error');
     try {
-      const data = await request('/api/retest', { id: quiz.id });
-      showQuiz(data, `Retest — ${data.questions.length} missed`);
+      const data = await request('/api/retest', { id: quiz.id, selection: $('#m-retest-selection').value });
+      showQuiz(data, `Retest — ${data.questions.length} ${data.questions.length === 1 ? 'entry' : 'entries'}`);
     } catch (exc) {
       error('#m-results-error', exc.message);
     } finally {
@@ -282,6 +287,30 @@
   }
 
   function setup() { showView('setup'); loadFiles(); }
+  async function restoreRecord(data) {
+    const opts = data.configuration;
+    for (const checkbox of document.querySelectorAll('#m-files input')) checkbox.checked = opts.files.includes(checkbox.value);
+    const available = [...document.querySelectorAll('#m-files input')].map((cb) => cb.value);
+    for (const name of opts.files.filter((name) => !available.includes(name))) {
+      const label = node('label', 'fileitem');
+      const checkbox = node('input');
+      checkbox.type = 'checkbox';
+      checkbox.value = name;
+      checkbox.checked = true;
+      checkbox.addEventListener('change', () => { save(); refreshPool(); });
+      label.append(checkbox, node('span', 'fname', name));
+      $('#m-files').append(label);
+    }
+    for (const name of ['kinds', 'voices', 'tenses', 'moods']) {
+      document.querySelectorAll(`#m-${name} input`).forEach((cb) => { cb.checked = opts[name].includes(cb.value); });
+    }
+    for (const name of ['count', 'gender']) $(`#m-${name}`).value = opts[name];
+    for (const name of ['exhaustive', 'shuffle']) $(`#m-${name}`).checked = opts[name];
+    $('#m-retest-selection').value = opts.retest_selection || 'wrong';
+    save();
+    await refreshPool();
+    showQuiz(data, data.retest ? 'Recorded retest' : 'Recorded test');
+  }
   $('#m-start').addEventListener('click', start);
   $('#m-submit').addEventListener('click', submit);
   $('#m-retest').addEventListener('click', retest);
@@ -318,5 +347,5 @@
   }
   for (const name of ['exhaustive', 'shuffle']) if (saved[name] !== undefined) $(`#m-${name}`).checked = saved[name];
   if (Array.isArray(saved.kinds)) document.querySelectorAll('#m-kinds input').forEach((cb) => { cb.checked = saved.kinds.includes(cb.value); });
-  loadFiles();
+  loadFiles().then(() => LatinRecords.init('morphology', () => quiz, restoreRecord));
 })();

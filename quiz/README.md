@@ -185,20 +185,56 @@ so), and a preposition's case accepts `abl` / `abl.` / `ablative`.
 Answers live on the server until you submit, so they aren't sitting in the page
 source while you work.
 
+## Test records
+
+Both tabs in both apps offer **Download test record** during a test and on
+its results page. Each JSON record saves that particular test or re-test:
+its configuration, ordered words, question directions, parsing fields,
+morphology pairs/genders/voices/tenses/moods and original answer keys.
+Repeated words and the exact order are preserved. The record contains the
+answer key so replay and grading still work after chapters or overrides change.
+Your responses and unfamiliar marks are omitted.
+
+In the plain server, open **Restore a test record** on the setup page and
+upload the JSON file. In Streamlit, use **Test records → Upload test record**
+in the sidebar. Uploading restores the controls and immediately starts the
+recorded questions with blank answers and unfamiliar marks cleared. Records
+work across both apps, even when the original chapter is no longer available.
+The plain server opens the appropriate tester automatically; Streamlit tells
+you which tab contains the restored test. Invalid records leave the current
+test unchanged.
+
+Streamlit requires version 1.43 or newer so downloading a record does not
+rerun the app and discard answers in progress. See the
+[Streamlit release notes](https://docs.streamlit.io/develop/quick-reference/release-notes/2025#version-1430).
+
+## Unfamiliar entries and review
+
+Tick **Unfamiliar** beneath any vocabulary question or morphology table
+during a test or re-test. After submission, all marked entries appear at the
+top, regardless of whether their answers were correct. The remaining entries
+are in a collapsed **Remaining entries** menu: wrong answers first, followed
+by correct answers (including optional-macron slips). Original question
+numbers are retained. Marking an entry does not change its score.
+
 ## Retesting mistakes
 
-The review page ends with **Retest the N I missed**, which starts a fresh quiz
-over exactly those words — all of them, never a sample — each asked the way
-round you got it wrong. Miss some of those and the new review offers a retest
-of what's left, so you can keep going until it says *Nothing to retest*.
+The review page offers **Retest entries** with three selections and their
+counts: **Wrong entries only**, **Unfamiliar entries only**, or **Unfamiliar +
+wrong entries**. Wrong entries are the default. The re-test covers all selected
+entries, never a sample; an entry that is both wrong and unfamiliar is included
+once. Vocabulary words repeat their original direction and parsing fields;
+morphology entries repeat their whole original table. Original answer keys
+are retained even after chapter edits. Each new attempt clears unfamiliar
+marks so you can mark the entries that remain unfamiliar.
 
 A word counts as missed if the meaning or any parsing field was wrong. **A
 macron slip is not a mistake**: answers flagged `≈` are counted right and are
 not retested. A word asked twice in one quiz (possible when the count exceeds
 the number of words) is retested once.
 
-Nothing is stored between quizzes — the retest works off the quiz you just
-submitted, and a restarted server forgets everything.
+The active session keeps the latest attempt for re-testing. A restarted server
+forgets its sessions; download a test record to preserve and replay an attempt.
 
 ## Differences between the two front ends
 
@@ -310,7 +346,8 @@ Each cell uses this policy:
    to their own grammatical cells. Other cells are not overridden by inference.
 2. Otherwise, either a rule-generated or imported spelling is accepted. A
    missing rule adds no check; cached forms alone can supply the answer.
-3. The answers page displays the accepted answer, each available source, and
+3. The answers page displays the accepted answer, a collapsed **Answer sources**
+   menu with the detailed chapter/rule/importer forms, and
    **⚠** whenever rule/importer spelling variant sets differ, even when they
    overlap or a chapter form takes precedence. Provider quantity marks are
    audit data, not trusted macron corrections. Pair components follow this
@@ -355,6 +392,9 @@ python -B -m unittest discover -s quiz -p 'test_*.py'
 - `test_streamlit.py` — Streamlit tabs, forms, independent sessions, grading/retesting and reloads
 - `streamlit_app.py` — the Streamlit front end
 - `streamlit_morphology.py` — the Streamlit morphology tab over the shared engine
+- `quiz_record.py` — portable record validation and review/re-test selection
+- `streamlit_records.py` — shared Streamlit record controls and review grouping
+- `test_records.py` — record replay, validation and re-test selection regressions
 - `sheet.py` — builds the downloadable worksheet as one self-contained file
 - `server.py` — the plain HTTP server and its JSON API
 - `static/` — the plain server's pages (`index.html`/`app.js`/`style.css`,

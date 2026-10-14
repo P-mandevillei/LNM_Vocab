@@ -5,5 +5,5 @@ primaryColor = "#7a2e2e"
 font = "serif"
 
 [server]
-# The chapter files are read from disk, never uploaded.
-maxUploadSize = 1
+# Chapters are read from disk; portable test records can be uploaded.
+maxUploadSize = 20

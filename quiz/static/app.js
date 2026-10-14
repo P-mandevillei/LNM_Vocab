@@ -128,6 +128,7 @@ function questionCard(q) {
     }
     card.append(grid);
   }
+  card.append(LatinRecords.unfamiliar(q.index));
   return card;
 }
 
@@ -175,12 +176,12 @@ async function startQuiz() {
 }
 
 async function startRetest() {
-  const data = await post('/api/retest', { id: quiz.id });
+  const data = await post('/api/retest', { id: quiz.id, selection: $('#retest-selection').value });
   if (data.error) {
     alert(data.error);
     return;
   }
-  showQuiz(data, `Retest — ${data.questions.length} missed`);
+  showQuiz(data, `Retest — ${data.questions.length} ${data.questions.length === 1 ? 'entry' : 'entries'}`);
 }
 
 /* ------------------------------- grading -------------------------------- */
@@ -192,6 +193,7 @@ function collectAnswers() {
     if (inp.dataset.role === 'main') answers[i].main = inp.value;
     else answers[i].fields[inp.dataset.key] = inp.value;
   }
+  LatinRecords.collectUnfamiliar($('#quizform'), answers);
   return answers;
 }
 
@@ -234,16 +236,10 @@ function renderResults(data) {
 
   // Macron slips are shown but don't count as mistakes worth retesting.
   const retest = $('#retest');
-  retest.hidden = !s.missed;
-  if (s.missed) {
-    retest.textContent = `Retest the ${s.missed} I missed`;
-  } else {
-    scoreBox.append(el('div', 'hint', 'Nothing to retest.'));
-  }
+  LatinRecords.retestControls($('#retest-selection'), retest, data.retest_counts);
 
   const list = $('#resultlist');
-  list.textContent = '';
-  for (const r of data.results) {
+  LatinRecords.review(list, data.results, (r) => {
     const worst = r.verdict === 'wrong' || r.fields.some((f) => f.verdict === 'wrong')
       ? 'bad' : (r.verdict === 'macrons' || r.fields.some((f) => f.verdict === 'macrons')
       ? 'warn' : 'ok');
@@ -258,8 +254,8 @@ function renderResults(data) {
                     r.given, r.answer, r.verdict));
     for (const f of r.fields) card.append(row(f.label, f.given, f.answer, f.verdict));
     card.append(el('div', 'fullentry', r.full_entry));
-    list.append(card);
-  }
+    return card;
+  });
 
   $('#quiz').hidden = true;
   $('#results').hidden = false;
@@ -283,6 +279,21 @@ function backToSetup() {
   $('#setup').hidden = false;
   fetchFiles();
   window.scrollTo({ top: 0 });
+}
+
+function restoreRecord(data) {
+  const opts = data.configuration;
+  for (const name of opts.files) {
+    if (!files.some((file) => file.name === name)) files.push({ name, count: 0, by_pos: {} });
+  }
+  localStorage.setItem(STORE, JSON.stringify({ ...loadPrefs(), ...opts }));
+  renderFiles();
+  $('#count').value = opts.count;
+  for (const key of ['exhaustive', 'shuffle', 'parsing']) $(`#${key}`).checked = opts[key];
+  for (const radio of document.querySelectorAll('input[name=mode]')) radio.checked = radio.value === opts.mode;
+  $('#retest-selection').value = opts.retest_selection || 'wrong';
+  updatePool();
+  showQuiz(data, data.retest ? 'Recorded retest' : 'Recorded test');
 }
 
 function openPrintSheet() {
@@ -332,15 +343,16 @@ document.querySelectorAll('input[name=mode]').forEach((r) =>
 // Enter moves to the next box; Ctrl+Enter submits the sheet.
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Enter' || $('#quiz').hidden) return;
+  if (e.ctrlKey || e.metaKey) { e.preventDefault(); submitQuiz(); return; }
+  if (!e.target.matches('#quizform input.answer')) return;
   e.preventDefault();
-  if (e.ctrlKey || e.metaKey) { submitQuiz(); return; }
   const inputs = [...document.querySelectorAll('#quizform input.answer')];
   const i = inputs.indexOf(document.activeElement);
   if (i >= 0 && i < inputs.length - 1) inputs[i + 1].focus();
   else if (i === inputs.length - 1) submitQuiz();
 });
 
-(function init() {
+(async function init() {
   const prefs = loadPrefs();
   if (prefs.count) $('#count').value = prefs.count;
   if (prefs.parsing !== undefined) $('#parsing').checked = prefs.parsing;
@@ -351,5 +363,6 @@ document.addEventListener('keydown', (e) => {
     const r = document.querySelector(`input[name=mode][value="${prefs.mode}"]`);
     if (r) r.checked = true;
   }
-  fetchFiles();
+  await fetchFiles();
+  await LatinRecords.init('vocabulary', () => quiz, restoreRecord);
 })();

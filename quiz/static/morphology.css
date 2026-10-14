@@ -41,4 +41,6 @@ button:disabled { opacity: 0.55; cursor: wait; }
   .m-table .m-cell { padding: 0.35rem 0.3rem; font-size: 0.86rem; }
 }
 .m-source { display:block; font-size:.85em; margin-top:.2rem; }
+.m-sources { margin-top:.3rem; }
+.m-sources summary { cursor:pointer; font-size:.85em; color:var(--muted); }
 #m-setup fieldset { border:1px solid #aaa6; border-radius:6px; padding:.5rem; }

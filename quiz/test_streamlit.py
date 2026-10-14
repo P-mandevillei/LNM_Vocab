@@ -223,6 +223,105 @@ class StreamlitMorphology(unittest.TestCase):
                 self.healthy(app)
                 self.assertEqual(len(app.session_state["morph_quiz"]), 2)
 
+    def test_unfamiliar_review_and_all_retest_selections_in_both_tabs(self):
+        import quiz_record
+        for kind in ("vocabulary", "morphology"):
+            app = self.app(exhaustive=False, kinds=["verb"], voice="active")
+            app.number_input(key="count").set_value(3).run()
+            if kind == "morphology":
+                app.button(key="morph_start").click().run()
+                questions = deepcopy(app.session_state["morph_quiz"])
+                self.fill_morphology(app, wrong={(1, "infinitive")})
+                app.checkbox(key="morph_unfamiliar_0").set_value(True)
+                submit = "Submit morphology answers"
+                prefix = "morph_"
+            else:
+                self.click(app, "Start quiz")
+                questions = deepcopy(app.session_state["quiz"])
+                for q in questions:
+                    app.text_input(key=f"ans_{q['index']}_main").set_value("wrong" if q["index"] == 1 else q["answer"].split(" / ")[0])
+                    for f in q["fields"]:
+                        app.text_input(key=f"ans_{q['index']}_{f['key']}").set_value(f["answer"].split(" / ")[0])
+                app.checkbox(key="unfamiliar_0").set_value(True)
+                submit = "Submit answers"
+                prefix = ""
+            self.click(app, submit)
+            original_record = deepcopy(app.session_state[f"{prefix}record"])
+            graded = app.session_state[f"{prefix}results"]
+            self.assertEqual(quiz_record.retest_counts(kind, questions, graded["results"]),
+                             {"wrong": 1, "unfamiliar": 1, "combined": 2})
+            self.assertTrue(any(item.value == "Unfamiliar entries (1)" for item in app.subheader))
+            remaining = next(e for e in app.expander if e.label.startswith("Remaining entries"))
+            self.assertFalse(remaining.proto.expanded)
+            if kind == "vocabulary":
+                self.assertIn('qnum">2.', remaining.markdown[0].value)
+                self.assertIn('qnum">3.', remaining.markdown[1].value)
+            for selection, expected in (("wrong", [1]), ("unfamiliar", [0]), ("combined", [0, 1])):
+                # Restore the same completed attempt for each independent choice.
+                app.session_state[f"{prefix}quiz"] = deepcopy(questions)
+                app.session_state[f"{prefix}record"] = deepcopy(original_record)
+                app.session_state[f"{prefix}results"] = deepcopy(graded)
+                app.session_state[f"{prefix}view"] = "results"
+                app.run()
+                app.selectbox(key=f"{prefix}retest_selection").set_value(selection).run()
+                if prefix:
+                    app.button(key="morph_retest").click().run()
+                else:
+                    button = next(b for b in app.button if b.label.startswith("Retest "))
+                    button.click().run()
+                self.healthy(app)
+                retested = app.session_state[f"{prefix}quiz"]
+                self.assertCountEqual([{**q, "index": 0} for q in retested],
+                                      [{**questions[i], "index": 0} for i in expected])
+                self.assertTrue(app.session_state[f"{prefix}record"]["retest"])
+                flag_prefix = "morph_unfamiliar_" if prefix else "unfamiliar_"
+                self.assertTrue(all(not c.value for c in app.checkbox if c.key and c.key.startswith(flag_prefix)))
+
+    def test_record_restores_controls_exact_questions_and_independent_tabs(self):
+        import quiz_record
+        app = self.app(exhaustive=False, kinds=["verb"], voice="active")
+        app.number_input(key="count").set_value(3).run()
+        self.click(app, "Start quiz")
+        original_vocab = deepcopy(app.session_state["quiz"])
+        vocab_record = deepcopy(app.session_state["record"])
+        app.button(key="morph_start").click().run()
+        morph_record = deepcopy(app.session_state["morph_record"])
+        for record in (vocab_record, morph_record):
+            app.multiselect(key="files").set_value(["ch1.md"])
+            app.number_input(key="count").set_value(1)
+            app.checkbox(key="shuffle").set_value(True)
+            app.run()
+            app.session_state["pending_record"] = quiz_record.loads(quiz_record.dumps(record))
+            app.run()
+            self.healthy(app)
+            prefix = "morph_" if record["kind"] == "morphology" else ""
+            self.assertEqual(app.session_state[f"{prefix}quiz"], record["questions"])
+            self.assertEqual(app.multiselect(key="files").value, ["ch10.md"])
+            self.assertEqual(app.number_input(key="count").value, 3)
+            self.assertFalse(app.checkbox(key="shuffle").value)
+            self.assertTrue(all(not w.value for w in app.text_input))
+        self.assertEqual(app.session_state["quiz"], original_vocab)
+        self.assertEqual(app.multiselect(key="morph_voices").value, ["active"])
+        app.session_state["pending_record"] = {"format": "wrong"}
+        app.run()
+        self.healthy(app)
+        self.assertEqual(app.session_state["quiz"], original_vocab)
+        self.assertTrue(any("Latin quiz test record" in e.value for e in app.error))
+
+    def test_record_can_restore_when_source_chapter_is_missing(self):
+        app = self.app(exhaustive=False, kinds=["verb"], voice="active")
+        self.click(app, "Start quiz")
+        record = deepcopy(app.session_state["record"])
+        with TemporaryDirectory() as directory, patch.dict("os.environ", {"LATIN_VAULT": directory}):
+            fresh = AppTest.from_file(str(HERE / "streamlit_app.py"), default_timeout=30)
+            fresh.session_state["pending_record"] = record
+            fresh.run()
+            self.healthy(fresh)
+            self.assertEqual(fresh.session_state["quiz"], record["questions"])
+            self.assertEqual(fresh.multiselect(key="files").value, ["ch10.md"])
+            self.click(fresh, "Submit answers")
+            self.assertEqual(fresh.session_state["results"]["score"]["missed"], 10)
+
 
 if __name__ == '__main__':
     unittest.main()

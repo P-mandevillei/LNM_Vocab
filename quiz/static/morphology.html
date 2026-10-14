@@ -69,9 +69,16 @@
     <details id="m-exclusions" hidden><summary id="m-exclusion-title"></summary><ul id="m-exclusion-list" class="hint"></ul></details>
     <div class="buttons"><button type="button" id="m-start" class="primary" disabled>Start quiz</button></div>
     <p id="m-setup-error" class="error" role="alert" hidden></p>
+    <details class="record-controls">
+      <summary>Restore a test record</summary>
+      <label class="field">Upload test record <input id="record-upload" type="file" accept=".json,application/json"></label>
+      <p class="hint">Restore the exact test or re-test from either app. Answers and unfamiliar marks start blank.</p>
+      <p class="error" id="record-error" role="alert" hidden></p>
+    </details>
   </section>
   <section id="m-quiz" class="card" hidden>
     <div class="quizhead"><h2 id="m-title">Question sheet</h2><button type="button" class="link" id="m-abandon">start over</button></div>
+    <button type="button" class="secondary" data-download-record>Download test record</button>
     <form id="m-form"></form>
     <button type="button" class="primary" id="m-submit">Submit answers</button>
     <p class="hint">Macrons are optional. Enter moves to the next box; Ctrl+Enter submits the sheet.</p>
@@ -80,11 +87,20 @@
   <section id="m-results" class="card" hidden>
     <div class="quizhead"><h2>Results</h2><button type="button" class="link" id="m-again">new quiz</button></div>
     <div id="m-score"></div>
-    <div class="buttons"><button type="button" id="m-retest" class="primary" hidden></button></div>
+    <div class="buttons">
+      <label class="field">Retest entries <select id="m-retest-selection" aria-label="Retest entries">
+        <option value="wrong">Wrong entries only</option>
+        <option value="unfamiliar">Unfamiliar entries only</option>
+        <option value="combined">Unfamiliar + wrong entries</option>
+      </select></label>
+      <button type="button" id="m-retest" class="primary" hidden></button>
+      <button type="button" class="secondary" data-download-record>Download test record</button>
+    </div>
     <p id="m-results-error" class="error" role="alert" hidden></p>
     <div id="m-result-list"></div>
   </section>
 </main>
+<script src="/records.js"></script>
 <script src="/morphology.js"></script>
 </body>
 </html>

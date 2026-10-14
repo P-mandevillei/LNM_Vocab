@@ -10,6 +10,8 @@ from pathlib import Path
 import streamlit as st
 
 import morphology as m
+import quiz_record
+import streamlit_records as records
 
 
 KIND_LABELS = {
@@ -34,6 +36,8 @@ CSS = """
 .morph-cell { padding:.3rem; border-radius:5px; }
 .morph-correction { display:block; font-weight:600; margin-top:.2rem; }
 .morph-source { display:block; font-size:.85em; margin-top:.2rem; }
+.morph-sources { margin-top:.3rem; }
+.morph-sources summary { cursor:pointer; font-size:.85em; opacity:.75; }
 </style>
 """
 
@@ -45,11 +49,12 @@ def init_state():
         st.session_state.setdefault(key, value)
 
 
-def begin_quiz(questions, title="Declension & conjugation"):
-    for key in [key for key in st.session_state if key.startswith("morph_ans_")]:
+def begin_quiz(questions, opts, title="Declension & conjugation", retest=False):
+    for key in [key for key in st.session_state if key.startswith(("morph_ans_", "morph_unfamiliar_"))]:
         del st.session_state[key]
     st.session_state.update(morph_view="quiz", morph_quiz=questions,
-                            morph_title=title, morph_results=None, morph_missed=[])
+                            morph_title=title, morph_results=None, morph_missed=[],
+                            morph_record=quiz_record.make_record("morphology", opts, questions, retest))
 
 
 def settings(shared):
@@ -111,7 +116,7 @@ def setup_view(chapters, req, vault):
         st.info("No supported entries match these settings. Pairs need both nouns and adjectives.")
     if st.button("Start morphology quiz", key="morph_start", type="primary", disabled=not total):
         data = m.build_quiz(pool, opts, lexicon=lexicon, sources=sources)
-        begin_quiz(data["questions"])
+        begin_quiz(data["questions"], {"files": req["files"], **opts})
         st.rerun()
 
 
@@ -156,11 +161,14 @@ def question_block(question):
         field = next(f for f in question["fields"] if f["key"] == "infinitive")
         st.write(field["label"])
         answer_input(question, field)
+    st.checkbox("Unfamiliar", key=f"morph_unfamiliar_{question['index']}",
+                help="Keep this entry at the top of the answers page.")
 
 
 def quiz_view():
     questions = st.session_state.morph_quiz
     st.subheader(st.session_state.morph_title)
+    records.download(st.session_state.morph_record, "morph_record_download")
     with st.form("morph_quiz_form", border=False):
         for question in questions:
             question_block(question)
@@ -171,7 +179,8 @@ def quiz_view():
         st.session_state.morph_view = "setup"
         st.rerun()
     if submitted:
-        answers = [{"fields": {field["key"]: st.session_state.get(
+        answers = [{"unfamiliar": st.session_state.get(f"morph_unfamiliar_{question['index']}", False),
+                    "fields": {field["key"]: st.session_state.get(
             f"morph_ans_{question['index']}_{field['key']}", "") for field in question["fields"]}}
                    for question in questions]
         graded = m.grade(questions, answers)
@@ -188,10 +197,12 @@ def result_cell(field):
     note = '<span class="note">macrons missing / wrong</span>' if field["verdict"] == "macrons" else ""
     if field.get("disagreement"):
         note += '<span class="morph-correction">⚠ Rule and importer spellings differ.</span>'
-    if field.get("chapter_precedence"):
-        note += '<span class="note">Chapter form takes precedence.</span>'
     sources = "".join(f'<span class="morph-source">{escape(name.title())}: {escape(" / ".join(forms))}</span>'
                       for name, forms in field.get("answer_sources", {}).items())
+    if sources:
+        precedence = '<span class="note">Chapter form takes precedence.</span>' if field.get("chapter_precedence") else ""
+        sources = (f'<details class="morph-sources"><summary>Answer sources</summary>'
+                   f'{precedence}{sources}</details>')
     return f'<div class="morph-cell {cls}">{mark} {given}{correction}{note}{sources}</div>'
 
 
@@ -219,23 +230,33 @@ def results_view():
     st.subheader("Morphology results")
     st.markdown(f'**{score["entry_correct"]} / {score["entry_total"]} entries correct** · '
                 f'{score["field_correct"]} / {score["field_total"]} cells correct')
+    counts = quiz_record.retest_counts("morphology", st.session_state.morph_quiz, graded["results"])
+    selection = st.selectbox("Retest entries", list(quiz_record.RETEST_CHOICES),
+                             format_func=lambda key: f"{quiz_record.RETEST_CHOICES[key]} ({counts[key]})",
+                             key="morph_retest_selection")
     retest, new = st.columns([1, 2])
-    if score["missed"]:
-        if retest.button(f"Retest the {score['missed']} I missed", key="morph_retest", type="primary"):
-            questions = m.retest(st.session_state.morph_quiz, st.session_state.morph_missed)
-            begin_quiz(questions, f"Retest — {len(questions)} missed")
+    if counts[selection]:
+        label = f"Retest the {counts[selection]} I missed" if selection == "wrong" else f"Retest {counts[selection]} {'entry' if counts[selection] == 1 else 'entries'}"
+        if retest.button(label, key="morph_retest", type="primary"):
+            indices = quiz_record.retest_indices("morphology", st.session_state.morph_quiz, graded["results"], selection)
+            questions = m.retest(st.session_state.morph_quiz, indices)
+            opts = {**st.session_state.morph_record["configuration"], "count": min(len(questions), 500),
+                    "exhaustive": False, "retest_selection": selection}
+            begin_quiz(questions, opts, f"Retest — {len(questions)} {'entry' if len(questions) == 1 else 'entries'}", retest=True)
             st.rerun()
     else:
-        retest.success("Nothing to retest.")
+        retest.info("Nothing to retest for this selection.")
     if new.button("New quiz", key="morph_new"):
         st.session_state.morph_view = "setup"
         st.rerun()
     st.divider()
-    for question in graded["results"]:
+    records.download(st.session_state.morph_record, "morph_record_download")
+    def render_result(question):
         heading(question)
         st.markdown(result_table(question), unsafe_allow_html=True)
         st.caption(question["full_entry"])
         st.divider()
+    records.results_groups(graded["results"], render_result)
 
 
 def render(chapters: dict, shared: dict, vault: Path):

@@ -24,6 +24,7 @@ from pathlib import Path
 
 import vocab
 import morphology
+import quiz_record
 
 HERE = Path(__file__).resolve().parent
 VAULT = HERE.parent
@@ -60,6 +61,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def _body(self):
         length = int(self.headers.get("Content-Length") or 0)
+        if length > quiz_record.MAX_BYTES:
+            raise ValueError("Request is too large (maximum 20 MB).")
         if not length:
             return {}
         return json.loads(self.rfile.read(length).decode("utf-8"))
@@ -97,6 +100,10 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         path = self.path.split("?", 1)[0]
         try:
+            if path == "/api/record":
+                return self._record()
+            if path == "/api/record/restore":
+                return self._restore_record()
             if path in ("/api/morphology/pool", "/api/morphology/quiz"):
                 return self._morphology_start(preview=path.endswith("/pool"))
             if path == "/api/quiz":
@@ -107,6 +114,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._printable()
             if path == "/api/retest":
                 return self._retest()
+        except ValueError as exc:
+            return self._json({"error": str(exc)}, 400)
         except Exception as exc:                       # surface errors in the UI
             return self._json({"error": f"{type(exc).__name__}: {exc}"}, 500)
         return self._send(404, b"Not found", "text/plain; charset=utf-8")
@@ -136,7 +145,11 @@ class Handler(BaseHTTPRequestHandler):
         return pool, count, mode, include_parsing
 
     def _remember(self, questions, files, mode, include_parsing,
-                  kind="vocabulary") -> str:
+                  kind="vocabulary", configuration=None, retest=False) -> str:
+        opts = configuration or {"files": list(files), "mode": mode,
+                                 "parsing": include_parsing, "count": min(len(questions), 500),
+                                 "exhaustive": False, "shuffle": True}
+        record = quiz_record.make_record(kind, opts, questions, retest)
         qid = uuid.uuid4().hex
         with QUIZ_LOCK:
             while len(QUIZZES) >= MAX_QUIZZES:
@@ -148,6 +161,8 @@ class Handler(BaseHTTPRequestHandler):
                 "parsing": include_parsing,
                 "missed": [],
                 "kind": kind,
+                "record": record,
+                "results": [],
             }
         return qid
 
@@ -178,46 +193,48 @@ class Handler(BaseHTTPRequestHandler):
         questions = vocab.build_quiz(pool, count, mode, include_parsing,
                                      random.Random(), exhaustive, shuffle)
         qid = self._remember(questions, req.get("files") or [], mode,
-                             include_parsing)
+                             include_parsing, configuration={"files": req.get("files") or [],
+                             "count": count, "mode": mode, "parsing": include_parsing,
+                             "exhaustive": exhaustive, "shuffle": shuffle})
         return self._json({"id": qid, "questions": self._public(questions),
                            "pool": len(pool), "exhaustive": exhaustive})
 
     def _retest(self):
-        """Every word missed in a graded quiz, asked the same way round."""
+        """Retest wrong, unfamiliar, or combined entries from the graded attempt."""
         req = self._body()
         with QUIZ_LOCK:
             rec = QUIZZES.get(req.get("id"))
         if not rec:
             return self._json({"error": "That quiz expired -- please start a new one."}, 400)
-        if not rec["missed"]:
-            return self._json({"error": "Nothing to retest -- nothing was missed."}, 400)
-
-        if rec.get("kind") == "morphology":
-            questions = morphology.retest(rec["questions"], rec["missed"])
-            qid = self._remember(questions, rec["files"], "morphology", False,
-                                 kind="morphology")
-            return self._json({"id": qid, "questions": morphology.public(questions),
-                               "retest": True})
-
-        vault = vocab.load_vault(VAULT)
-        pool = [e for name, entries in vault.items() if name in rec["files"]
-                for e in entries]
-        by_key = {e.key: e for e in pool}
-
-        rng = random.Random()
-        # A chapter edited mid-session can drop a word; retest what is left.
-        chosen = [by_key[m["key"]] for m in rec["missed"] if m["key"] in by_key]
-        directions = {m["key"]: m["direction"] for m in rec["missed"]}
-        if not chosen:
-            return self._json({"error": "Those words are no longer in the chapter files."}, 400)
-        rng.shuffle(chosen)
-
-        questions = vocab.make_questions(chosen, pool, rec["mode"],
-                                         rec["parsing"], rng, directions)
+        selection = req.get("selection", "wrong")
+        indices = quiz_record.retest_indices(rec["kind"], rec["questions"], rec["results"], selection)
+        if not indices:
+            return self._json({"error": "No entries match that retest selection."}, 400)
+        questions = morphology.retest(rec["questions"], indices)
+        opts = {**rec["record"]["configuration"], "count": min(len(questions), 500),
+                "exhaustive": False, "retest_selection": selection}
         qid = self._remember(questions, rec["files"], rec["mode"],
-                             rec["parsing"])
-        return self._json({"id": qid, "questions": self._public(questions),
-                           "pool": len(pool), "retest": True})
+                             rec["parsing"], kind=rec["kind"], configuration=opts, retest=True)
+        public = morphology.public if rec["kind"] == "morphology" else self._public
+        return self._json({"id": qid, "questions": public(questions), "retest": True})
+
+    def _record(self):
+        req = self._body()
+        with QUIZ_LOCK:
+            rec = QUIZZES.get(req.get("id"))
+        if not rec:
+            return self._json({"error": "That quiz expired -- please start a new one."}, 400)
+        return self._json(rec["record"])
+
+    def _restore_record(self):
+        record = quiz_record.validate(self._body().get("record"))
+        opts, kind = record["configuration"], record["kind"]
+        qid = self._remember(record["questions"], opts["files"], opts.get("mode", "morphology"),
+                             opts.get("parsing", False), kind=kind,
+                             configuration=opts, retest=record["retest"])
+        public = morphology.public if kind == "morphology" else self._public
+        return self._json({"id": qid, "kind": kind, "configuration": opts,
+                           "retest": record["retest"], "questions": public(record["questions"])})
 
     def _printable(self):
         """A worksheet, answers included -- the print page needs the key."""
@@ -265,6 +282,8 @@ class Handler(BaseHTTPRequestHandler):
         with QUIZ_LOCK:
             if qid in QUIZZES:                 # remember what to retest
                 QUIZZES[qid]["missed"] = graded["missed"]
+                QUIZZES[qid]["results"] = graded["results"]
+        graded["retest_counts"] = quiz_record.retest_counts(rec["kind"], rec["questions"], graded["results"])
         graded.pop("missed", None)             # the page only needs the count
         return self._json(graded)
 
@@ -301,7 +320,7 @@ class Handler(BaseHTTPRequestHandler):
                                "Pairs need both nouns and adjectives in the selected chapters.",
                                **data}, 400)
         qid = self._remember(questions, wanted, "morphology", False,
-                             kind="morphology")
+                             kind="morphology", configuration={"files": wanted, **opts})
         return self._json({"id": qid, "questions": morphology.public(questions),
                            **data})
 

@@ -243,3 +243,9 @@ input.answer.small { font-size: 0.95rem; }
   color: var(--muted);
   font-style: italic;
 }
+
+.unfamiliar-control { margin-top: .8rem; color: var(--muted); font-size: .85rem; }
+.remaining-entries { margin-top: 1rem; }
+.remaining-entries > summary, .record-controls > summary { cursor: pointer; padding: .6rem 0; }
+.record-controls { margin-top: 1rem; }
+[data-download-record] { margin-bottom: 1rem; }

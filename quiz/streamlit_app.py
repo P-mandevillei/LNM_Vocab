@@ -19,6 +19,9 @@ import streamlit as st
 from streamlit.components.v1 import html as html_component
 
 import vocab
+import morphology as morphology_engine
+import quiz_record
+import streamlit_records as records
 from sheet import MODE_LABEL, render_sheet
 from streamlit_morphology import render as morphology_tab
 
@@ -123,16 +126,17 @@ def init_state() -> None:
 
 def clear_answers() -> None:
     """Drop the text_input values of a finished quiz."""
-    for key in [k for k in st.session_state if k.startswith("ans_")]:
+    for key in [k for k in st.session_state if k.startswith(("ans_", "unfamiliar_"))]:
         del st.session_state[key]
 
 
 def begin_quiz(questions: list[dict], title: str, files: list[str],
-               mode: str, parsing: bool) -> None:
+               mode: str, parsing: bool, opts: dict, retest=False) -> None:
     clear_answers()
     st.session_state.update(
         view="quiz", quiz=questions, quiz_title=title, quiz_files=list(files),
         quiz_mode=mode, quiz_parsing=parsing, results=None, missed=[],
+        record=quiz_record.make_record("vocabulary", opts, questions, retest),
     )
 
 
@@ -141,7 +145,7 @@ def begin_quiz(questions: list[dict], title: str, files: list[str],
 # ---------------------------------------------------------------------------
 
 def sidebar(chapters: dict) -> dict:
-    names = list(chapters)
+    names = list(dict.fromkeys([*chapters, *st.session_state.get("files", [])]))
     with st.sidebar:
         st.subheader("Chapters")
         if "files" not in st.session_state:
@@ -163,7 +167,7 @@ def sidebar(chapters: dict) -> dict:
                                label_visibility="collapsed")
         for name in files:
             by_pos: dict[str, int] = {}
-            for e in chapters[name]:
+            for e in chapters.get(name, []):
                 by_pos[e.pos] = by_pos.get(e.pos, 0) + 1
             breakdown = ", ".join(f"{n} {pos}{'' if n == 1 else 's'}"
                                   for pos, n in by_pos.items())
@@ -221,7 +225,7 @@ def setup_view(chapters: dict, opts: dict) -> None:
         begin_quiz(questions,
                    "Question sheet — every word" if opts["exhaustive"]
                    else "Question sheet",
-                   opts["files"], opts["mode"], opts["parsing"])
+                   opts["files"], opts["mode"], opts["parsing"], opts)
         st.rerun()
 
     printable_section(pool, opts)
@@ -283,11 +287,14 @@ def question_block(q: dict) -> None:
     if q["fields"]:
         for col, f in zip(st.columns(len(q["fields"])), q["fields"]):
             col.text_input(f["label"], key=f"ans_{q['index']}_{f['key']}")
+    st.checkbox("Unfamiliar", key=f"unfamiliar_{q['index']}",
+                help="Keep this entry at the top of the answers page.")
 
 
 def quiz_view() -> None:
     questions = st.session_state.quiz
     st.title(st.session_state.quiz_title)
+    records.download(st.session_state.record, "vocab_record_download")
 
     # NB: the form key must not collide with a session_state key of our own.
     with st.form("quiz_form", border=False):
@@ -305,6 +312,7 @@ def quiz_view() -> None:
         answers = [
             {
                 "main": st.session_state.get(f"ans_{q['index']}_main", ""),
+                "unfamiliar": st.session_state.get(f"unfamiliar_{q['index']}", False),
                 "fields": {f["key"]: st.session_state.get(
                     f"ans_{q['index']}_{f['key']}", "") for f in q["fields"]},
             }
@@ -372,40 +380,39 @@ def results_view(chapters: dict) -> None:
         unsafe_allow_html=True)
     st.write("")
 
+    counts = quiz_record.retest_counts("vocabulary", st.session_state.quiz, graded["results"])
+    selection = st.selectbox("Retest entries", list(quiz_record.RETEST_CHOICES),
+                             format_func=lambda key: f"{quiz_record.RETEST_CHOICES[key]} ({counts[key]})",
+                             key="retest_selection")
     c1, c2 = st.columns([1, 2])
-    if s["missed"]:
-        if c1.button(f"Retest the {s['missed']} I missed", type="primary"):
-            start_retest(chapters)
+    if counts[selection]:
+        label = f"Retest the {counts[selection]} I missed" if selection == "wrong" else f"Retest {counts[selection]} {'entry' if counts[selection] == 1 else 'entries'}"
+        if c1.button(label, type="primary"):
+            start_retest(selection)
     else:
-        c1.success("Nothing to retest.")
+        c1.info("Nothing to retest for this selection.")
     if c2.button("New quiz"):
         st.session_state.view = "setup"
         st.rerun()
 
     st.divider()
-    for r in graded["results"]:
-        st.markdown(result_html(r), unsafe_allow_html=True)
+    records.download(st.session_state.record, "vocab_record_download")
+    records.results_groups(graded["results"], lambda r: st.markdown(result_html(r), unsafe_allow_html=True))
 
 
-def start_retest(chapters: dict) -> None:
-    """Every word missed, asked the way round it was missed."""
-    missed = st.session_state.missed
-    pool = pool_for(chapters, st.session_state.quiz_files)
-    by_key = {e.key: e for e in pool}
-    # A chapter edited mid-session can drop a word; retest what is left.
-    chosen = [by_key[m["key"]] for m in missed if m["key"] in by_key]
-    if not chosen:
-        st.warning("Those words are no longer in the chapter files.")
+def start_retest(selection="wrong") -> None:
+    """Repeat the selected entries with their original questions and keys."""
+    indices = quiz_record.retest_indices("vocabulary", st.session_state.quiz,
+                                        st.session_state.results["results"], selection)
+    if not indices:
+        st.info("No entries match that retest selection.")
         return
-
-    rng = random.Random()
-    rng.shuffle(chosen)
-    questions = vocab.make_questions(
-        chosen, pool, st.session_state.quiz_mode, st.session_state.quiz_parsing,
-        rng, {m["key"]: m["direction"] for m in missed})
-    begin_quiz(questions, f"Retest — {len(questions)} missed",
+    questions = morphology_engine.retest(st.session_state.quiz, indices)
+    opts = {**st.session_state.record["configuration"], "count": min(len(questions), 500),
+            "exhaustive": False, "retest_selection": selection}
+    begin_quiz(questions, f"Retest — {len(questions)} {'entry' if len(questions) == 1 else 'entries'}",
                st.session_state.quiz_files, st.session_state.quiz_mode,
-               st.session_state.quiz_parsing)
+               st.session_state.quiz_parsing, opts, retest=True)
     st.rerun()
 
 
@@ -413,14 +420,14 @@ def start_retest(chapters: dict) -> None:
 
 def main() -> None:
     init_state()
+    records.restore_pending()
+    records.upload_section()
     if not VAULT.is_dir():
-        st.error(f"No chapter folder at {VAULT}. Set $LATIN_VAULT to point at it.")
-        return
+        st.warning(f"No chapter folder at {VAULT}. Upload a record or set $LATIN_VAULT.")
 
     chapters = load_chapters(vault_stamp(), str(VAULT))
     if not chapters:
-        st.error(f"No chapter markdown files found in {VAULT}.")
-        return
+        st.warning(f"No chapter markdown files found in {VAULT}. You can still upload a test record.")
 
     opts = sidebar(chapters)
     vocabulary, morphology = st.tabs(["Vocabulary", "Declension & conjugation"])

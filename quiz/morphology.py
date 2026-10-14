@@ -472,6 +472,7 @@ def grade(questions: list[dict], answers: list[dict]) -> dict:
         if wrong:
             missed.setdefault(q["identity"], q["index"])
         results.append({**public([q])[0], "fields": fields, "full_entry": q["full_entry"],
+                        "unfamiliar": bool(given.get("unfamiliar", False)),
                         "verdict": "wrong" if wrong else "macrons" if any(f["verdict"] == "macrons" for f in fields) else "correct"})
     return {"results": results,
             "score": {"entry_correct": entry_correct, "entry_total": len(questions),

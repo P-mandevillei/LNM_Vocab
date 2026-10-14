@@ -633,6 +633,7 @@ def grade(questions: list[dict], answers: list[dict]) -> dict:
             "verdict": verdict,
             "fields": field_results,
             "full_entry": q["full_entry"],
+            "unfamiliar": bool(given.get("unfamiliar", False)),
         })
 
     missed = missed_entries(questions, results)
