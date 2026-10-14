@@ -236,14 +236,25 @@ with the same adjective gender, verb voice, and noun–adjective pair. Exact
 repeats of the same missed problem are retested once. Retests use the original
 answer key even if a chapter is edited mid-session.
 
-Plural-only nouns have disabled singular cells. Common-gender nouns are given
+Plural-only nouns and adjectives have disabled singular cells, including in
+agreement pairs. Common-gender nouns are given
 an explicit gender for each problem. Verbs whose chapter sense lacks a full
 personal passive paradigm are offered only in the active voice; passive-only
 draws exclude them. This includes `sum`, `possum`, `soleō`, intransitive senses,
 and `dō`, whose first-person passive is absent from the reference paradigm.
 
-The current chapters supply 72 supported noun entries, 13 adjectives and 49
-verb entries. The unavailable-entry disclosure identifies phrases and
+Chapters 1–10 supply 79 supported noun entries, 18 adjectives and 56
+verb entries. Chapter 10's 19 individual inflectable words are all supported:
+7 nouns, 5 adjectives and 7 verbs. Selecting all four entry types produces
+26 exhaustive entries, including 7 noun–adjective pairs. Its third-declension
+adjectives (`ācer`, `celeber`, `fēlīx`, `fortis`) work in all genders, and its
+mixed third-conjugation verbs (`capiō`, `cupiō`, `fugiō`) include the matching
+present infinitive. `paucī` and its agreeing pairs are plural only; `fugiō`
+(flee) and `pugnō` (fight) are active only for their chapter senses. `deus`
+accepts its irregular plural variants and the vocative `deus` or late `dee`.
+The phrase `consilia capere` and the conjunction `nec` remain vocabulary items.
+
+The unavailable-entry disclosure identifies phrases and
 incomplete dictionary entries rather than silently inventing their forms.
 Regular new words can be added in the usual chapter format. Extra inflection
 metadata, exceptions, variants and complete irregular answer tables go in
@@ -267,6 +278,9 @@ available through Dickinson College Commentaries:
 
 - [Number and case](https://dcc.dickinson.edu/grammar/latin/number-and-case)
 - [Third-declension i-stem forms](https://dcc.dickinson.edu/grammar/latin/3rd-declension-summary-i-stem-forms)
+- [Third-declension adjective paradigms](https://dcc.dickinson.edu/grammar/latin/3rd-declension-adjectives-classification-and-paradigms)
+- [The irregular declension of deus](https://dcc.dickinson.edu/grammar/latin/2nd-declension-case-forms)
+- [Mixed third-conjugation verbs and infinitives](https://dcc.dickinson.edu/sites/default/files/3rd_conj_io_verbs_pres.pdf)
 - [First/second-declension adjectives](https://dcc.dickinson.edu/grammar/latin/1st-and-2nd-declension-adjectives-%C4%81-o-stems)
 - [Present verb endings](https://dcc.dickinson.edu/sites/default/files/verb_personal_endings_pres.pdf)
 - [The irregular present of dō](https://dcc.dickinson.edu/sites/default/files/d%C5%8D_d%C4%83re_pres.pdf)
@@ -288,6 +302,7 @@ python -B -m unittest discover -s quiz -p 'test_*.py'
 - `MORPHOLOGY.md` — guide to extending answer keys for future chapters
 - `test_morphology.py` — reference paradigms and HTTP regression tests
 - `test_morphology_extensions.py` — new classes, custom tables and live reload tests
+- `test_morphology_ch10.py` — every chapter 10 table, agreement and HTTP workflow
 - `streamlit_app.py` — the Streamlit front end
 - `sheet.py` — builds the downloadable worksheet as one self-contained file
 - `server.py` — the plain HTTP server and its JSON API

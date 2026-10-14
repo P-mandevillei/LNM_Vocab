@@ -345,8 +345,9 @@ def question(candidate: dict, index: int, opts: dict, rng: random.Random) -> dic
         else:
             q["prompt"] = ", ".join(model.forms)
         q["prompt_label"] = f"Decline {'the noun and agreeing adjective' if kind == 'pair' else 'the ' + kind} · {GENDERS[gender]}"
-        if model.number:
-            q["notes"].append("Plural only." if model.number == "pl" else "Singular only.")
+        restriction = model.number or (am.number if kind == "pair" else None)
+        if restriction:
+            q["notes"].append("Plural only." if restriction == "pl" else "Singular only.")
         for case in CASES:
             for number in NUMBERS:
                 cell = _cell(f"{case}_{number}", f"{case.title()} {number}", forms.get((case, number)), known_quantities)

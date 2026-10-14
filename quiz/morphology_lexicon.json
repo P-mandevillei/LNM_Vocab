@@ -596,6 +596,52 @@
       "gender": "f",
       "declension": 3,
       "i_stem": true
+    },
+    "deus": {
+      "forms": ["deus", "deī"],
+      "gender": "m",
+      "declension": 2,
+      "overrides": {
+        "vocative_singular": ["deus", "dee"],
+        "nominative_plural": ["deī", "diī", "dī"],
+        "genitive_plural": ["deōrum", "deum"],
+        "dative_plural": ["deīs", "diīs", "dīs"],
+        "ablative_plural": ["deīs", "diīs", "dīs"],
+        "vocative_plural": ["deī", "diī", "dī"]
+      },
+      "source": "Allen & Greenough 49g: https://dcc.dickinson.edu/grammar/latin/2nd-declension-case-forms (vocative deus or late dee)"
+    },
+    "donum": {
+      "forms": ["dōnum", "dōnī"],
+      "gender": "n",
+      "declension": 2
+    },
+    "equus": {
+      "forms": ["equus", "equī"],
+      "gender": "m",
+      "declension": 2
+    },
+    "flamma": {
+      "forms": ["flamma", "flammae"],
+      "gender": "f",
+      "declension": 1
+    },
+    "hostis": {
+      "forms": ["hostis", "hostis"],
+      "gender": "m",
+      "declension": 3,
+      "i_stem": true
+    },
+    "nox": {
+      "forms": ["nox", "noctis"],
+      "gender": "f",
+      "declension": 3,
+      "i_stem": true
+    },
+    "periculum": {
+      "forms": ["perīculum", "perīculī"],
+      "gender": "n",
+      "declension": 2
     }
   },
   "adjectives": {
@@ -707,6 +753,36 @@
         "sevērum"
       ],
       "declension": 2
+    },
+    "acer": {
+      "forms": ["ācer", "ācris", "ācre"],
+      "declension": 3,
+      "i_stem": true,
+      "source": "https://dcc.dickinson.edu/grammar/latin/3rd-declension-adjectives-classification-and-paradigms"
+    },
+    "celeber": {
+      "forms": ["celeber", "celebris", "celebre"],
+      "declension": 3,
+      "i_stem": true,
+      "source": "Allen & Greenough 115a: https://dcc.dickinson.edu/grammar/latin/3rd-declension-adjectives-classification-and-paradigms"
+    },
+    "felix": {
+      "forms": ["fēlīx", "fēlīcis"],
+      "declension": 3,
+      "i_stem": true,
+      "source": "https://dcc.dickinson.edu/grammar/latin/3rd-declension-adjectives-classification-and-paradigms"
+    },
+    "fortis": {
+      "forms": ["fortis", "forte"],
+      "declension": 3,
+      "i_stem": true
+    },
+    "pauci": {
+      "forms": ["paucī", "paucae", "pauca"],
+      "declension": 2,
+      "number": "pl",
+      "stem": "pauc",
+      "source": "https://dcc.dickinson.edu/latin-core-list1 (paucī -ae -a: few)"
     }
   },
   "verbs": {
@@ -1012,6 +1088,51 @@
       "infinitive": "venīre",
       "conjugation": "4",
       "passive": false
+    },
+    "aedifico": {
+      "headword": "aedificō",
+      "infinitive": "aedificāre",
+      "conjugation": "1",
+      "passive": true
+    },
+    "capio": {
+      "headword": "capiō",
+      "infinitive": "capere",
+      "conjugation": "3io",
+      "passive": true,
+      "source": "https://dcc.dickinson.edu/sites/default/files/3rd_conj_io_verbs_pres.pdf"
+    },
+    "cupio": {
+      "headword": "cupiō",
+      "infinitive": "cupere",
+      "conjugation": "3io",
+      "passive": true
+    },
+    "deleo": {
+      "headword": "dēleō",
+      "infinitive": "dēlēre",
+      "conjugation": "2",
+      "passive": true
+    },
+    "fugio": {
+      "headword": "fugiō",
+      "infinitive": "fugere",
+      "conjugation": "3io",
+      "passive": false,
+      "source": "Chapter 10 intransitive sense: flee, run away; no six-person personal passive."
+    },
+    "moveo": {
+      "headword": "moveō",
+      "infinitive": "movēre",
+      "conjugation": "2",
+      "passive": true
+    },
+    "pugno": {
+      "headword": "pugnō",
+      "infinitive": "pugnāre",
+      "conjugation": "1",
+      "passive": false,
+      "source": "Chapter 10 intransitive sense: fight; only an impersonal passive, not a six-person personal passive."
     }
   }
 }
