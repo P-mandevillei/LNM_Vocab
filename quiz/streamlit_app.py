@@ -136,7 +136,7 @@ def begin_quiz(questions: list[dict], title: str, files: list[str],
     st.session_state.update(
         view="quiz", quiz=questions, quiz_title=title, quiz_files=list(files),
         quiz_mode=mode, quiz_parsing=parsing, results=None, missed=[],
-        record=quiz_record.make_record("vocabulary", opts, questions, retest),
+        record=quiz_record.make_record("vocabulary", opts, questions, retest, compact=True),
     )
 
 
@@ -319,6 +319,7 @@ def quiz_view() -> None:
             for q in questions
         ]
         graded = vocab.grade(questions, answers)
+        st.session_state.record = quiz_record.with_result(st.session_state.record, questions, graded)
         st.session_state.results = graded
         st.session_state.missed = graded["missed"]
         st.session_state.view = "results"
@@ -420,7 +421,7 @@ def start_retest(selection="wrong") -> None:
 
 def main() -> None:
     init_state()
-    records.restore_pending()
+    records.restore_pending(VAULT)
     records.upload_section()
     if not VAULT.is_dir():
         st.warning(f"No chapter folder at {VAULT}. Upload a record or set $LATIN_VAULT.")

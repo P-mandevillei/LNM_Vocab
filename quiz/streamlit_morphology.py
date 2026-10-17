@@ -54,7 +54,7 @@ def begin_quiz(questions, opts, title="Declension & conjugation", retest=False):
         del st.session_state[key]
     st.session_state.update(morph_view="quiz", morph_quiz=questions,
                             morph_title=title, morph_results=None, morph_missed=[],
-                            morph_record=quiz_record.make_record("morphology", opts, questions, retest))
+                            morph_record=quiz_record.make_record("morphology", opts, questions, retest, compact=True))
 
 
 def settings(shared):
@@ -184,6 +184,7 @@ def quiz_view():
             f"morph_ans_{question['index']}_{field['key']}", "") for field in question["fields"]}}
                    for question in questions]
         graded = m.grade(questions, answers)
+        st.session_state.morph_record = quiz_record.with_result(st.session_state.morph_record, questions, graded)
         st.session_state.update(morph_results=graded, morph_missed=graded["missed"], morph_view="results")
         st.rerun()
 

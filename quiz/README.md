@@ -187,22 +187,34 @@ source while you work.
 
 ## Test records
 
-Both tabs in both apps offer **Download test record** during a test and on
-its results page. Each JSON record saves that particular test or re-test:
-its configuration, ordered words, question directions, parsing fields,
-morphology pairs/genders/voices/tenses/moods and original answer keys.
-Repeated words and the exact order are preserved. The record contains the
-answer key so replay and grading still work after chapters or overrides change.
-Your responses and unfamiliar marks are omitted.
+Both Streamlit tabs offer **Download test record** during a test and on its
+results page. New records use compact version 2 JSON: the test configuration
+and an ordered list of chapter entry references (`filename:line`) with the
+choices made for each occurrence. Vocabulary saves its question direction;
+morphology saves its entry type, chosen gender or verb voice/tense/mood, and
+the actual adjective reference for a pair. Repeated words and their exact
+order are preserved. Tables, labels and answer keys are reconstructed rather
+than copied into every record.
 
-In the plain server, open **Restore a test record** on the setup page and
-upload the JSON file. In Streamlit, use **Test records → Upload test record**
-in the sidebar. Uploading restores the controls and immediately starts the
-recorded questions with blank answers and unfamiliar marks cleared. Records
-work across both apps, even when the original chapter is no longer available.
-The plain server opens the appropriate tester automatically; Streamlit tells
-you which tab contains the restored test. Invalid records leave the current
-test unchanged.
+The original chapter markdown files must remain installed and unchanged.
+Restoration uses the current morphology definitions, overrides and imported
+tables; catalog and engine revisions are not retained. Original answer keys
+are not archived in new records.
+
+Completed downloads also contain a compact result: final score totals,
+incorrect question/field positions, and any unfamiliar entry indices. They
+never retain submitted answer text or expanded grading objects.
+
+Use **Test records → Upload test record** in the Streamlit sidebar. Uploading
+restores the controls and starts the recorded questions as a new attempt,
+with blank answers, cleared unfamiliar marks and no previous result attached.
+Streamlit tells you which tab contains the restored test. Missing entries or
+invalid records leave the current test and controls unchanged.
+
+Streamlit still accepts older version 1 snapshots, including their embedded
+answer keys, even without their original chapters. The legacy plain server's
+version 1 export and restore behavior is unchanged; version 2 records are for
+Streamlit.
 
 Streamlit requires version 1.43 or newer so downloading a record does not
 rerun the app and discard answers in progress. See the
@@ -395,6 +407,7 @@ python -B -m unittest discover -s quiz -p 'test_*.py'
 - `quiz_record.py` — portable record validation and review/re-test selection
 - `streamlit_records.py` — shared Streamlit record controls and review grouping
 - `test_records.py` — record replay, validation and re-test selection regressions
+- `test_reference_records.py` — compact record reconstruction, sparse results and size regressions
 - `sheet.py` — builds the downloadable worksheet as one self-contained file
 - `server.py` — the plain HTTP server and its JSON API
 - `static/` — the plain server's pages (`index.html`/`app.js`/`style.css`,

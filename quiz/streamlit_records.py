@@ -16,13 +16,14 @@ def upload_changed():
         st.session_state.record_error = str(exc)
 
 
-def restore_pending():
+def restore_pending(vault):
     pending = st.session_state.pop("pending_record", None)
     if pending is None:
         return
     # Validate before changing any existing quiz or widget preference.
     try:
         record = quiz_record.validate(pending)
+        questions = quiz_record.reconstruct(record, vault)
     except ValueError as exc:
         st.session_state.record_error = str(exc)
         return
@@ -44,7 +45,10 @@ def restore_pending():
         st.session_state.update(quiz_files=opts["files"], quiz_mode=opts["mode"],
                                 quiz_parsing=opts["parsing"])
     title = "Recorded retest" if record["retest"] else "Recorded test"
-    st.session_state.update({f"{prefix}view": "quiz", f"{prefix}quiz": record["questions"],
+    # An upload starts a new attempt; completed results stay in the downloaded
+    # record and must not be attached to its new blank responses.
+    record.pop("result", None)
+    st.session_state.update({f"{prefix}view": "quiz", f"{prefix}quiz": questions,
                              f"{prefix}{'title' if prefix else 'quiz_title'}": title,
                              f"{prefix}results": None, f"{prefix}missed": [],
                              f"{prefix}record": record,
@@ -56,8 +60,8 @@ def upload_section():
     with st.sidebar.expander("Test records"):
         st.file_uploader("Upload test record", type=["json"], key="record_upload",
                          on_change=upload_changed,
-                         help="Restore the settings and exact questions from either app.")
-        st.caption("Records work in both apps. Answers and unfamiliar marks start blank.")
+                         help="Rebuild the recorded questions from the installed chapter files.")
+        st.caption("Compact records require their original chapters. Answers and unfamiliar marks start blank.")
         if st.session_state.get("record_error"):
             st.error(st.session_state.record_error)
         if st.session_state.get("record_notice"):

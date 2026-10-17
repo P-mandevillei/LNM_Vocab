@@ -248,6 +248,11 @@ class StreamlitMorphology(unittest.TestCase):
             self.click(app, submit)
             original_record = deepcopy(app.session_state[f"{prefix}record"])
             graded = app.session_state[f"{prefix}results"]
+            self.assertEqual(original_record["version"], 2)
+            self.assertEqual(original_record["result"]["score"], graded["score"])
+            self.assertEqual(original_record["result"]["wrong"],
+                             {"1": ["infinitive" if prefix else "main"]})
+            self.assertEqual(original_record["result"]["unfamiliar"], [0])
             self.assertEqual(quiz_record.retest_counts(kind, questions, graded["results"]),
                              {"wrong": 1, "unfamiliar": 1, "combined": 2})
             self.assertTrue(any(item.value == "Unfamiliar entries (1)" for item in app.subheader))
@@ -274,6 +279,7 @@ class StreamlitMorphology(unittest.TestCase):
                 self.assertCountEqual([{**q, "index": 0} for q in retested],
                                       [{**questions[i], "index": 0} for i in expected])
                 self.assertTrue(app.session_state[f"{prefix}record"]["retest"])
+                self.assertNotIn("result", app.session_state[f"{prefix}record"])
                 flag_prefix = "morph_unfamiliar_" if prefix else "unfamiliar_"
                 self.assertTrue(all(not c.value for c in app.checkbox if c.key and c.key.startswith(flag_prefix)))
 
@@ -285,8 +291,12 @@ class StreamlitMorphology(unittest.TestCase):
         original_vocab = deepcopy(app.session_state["quiz"])
         vocab_record = deepcopy(app.session_state["record"])
         app.button(key="morph_start").click().run()
+        original_morph = deepcopy(app.session_state["morph_quiz"])
         morph_record = deepcopy(app.session_state["morph_record"])
+        expected = {"vocabulary": original_vocab, "morphology": original_morph}
         for record in (vocab_record, morph_record):
+            self.assertEqual(record["version"], 2)
+            self.assertTrue(all("fields" not in ref and "answer" not in ref for ref in record["questions"]))
             app.multiselect(key="files").set_value(["ch1.md"])
             app.number_input(key="count").set_value(1)
             app.checkbox(key="shuffle").set_value(True)
@@ -295,7 +305,7 @@ class StreamlitMorphology(unittest.TestCase):
             app.run()
             self.healthy(app)
             prefix = "morph_" if record["kind"] == "morphology" else ""
-            self.assertEqual(app.session_state[f"{prefix}quiz"], record["questions"])
+            self.assertEqual(app.session_state[f"{prefix}quiz"], expected[record["kind"]])
             self.assertEqual(app.multiselect(key="files").value, ["ch10.md"])
             self.assertEqual(app.number_input(key="count").value, 3)
             self.assertFalse(app.checkbox(key="shuffle").value)
@@ -307,11 +317,21 @@ class StreamlitMorphology(unittest.TestCase):
         self.healthy(app)
         self.assertEqual(app.session_state["quiz"], original_vocab)
         self.assertTrue(any("Latin quiz test record" in e.value for e in app.error))
+        bad = deepcopy(vocab_record)
+        bad["questions"][0]["entry"] = "ch10.md:999999"
+        app.session_state["pending_record"] = bad
+        app.run()
+        self.healthy(app)
+        self.assertEqual(app.session_state["quiz"], original_vocab)
+        self.assertEqual(app.number_input(key="count").value, 3)
+        self.assertTrue(any("original chapter files" in e.value for e in app.error))
 
-    def test_record_can_restore_when_source_chapter_is_missing(self):
+    def test_legacy_record_can_restore_when_source_chapter_is_missing(self):
+        import quiz_record
         app = self.app(exhaustive=False, kinds=["verb"], voice="active")
         self.click(app, "Start quiz")
-        record = deepcopy(app.session_state["record"])
+        record = quiz_record.make_record("vocabulary", app.session_state["record"]["configuration"],
+                                         app.session_state["quiz"])
         with TemporaryDirectory() as directory, patch.dict("os.environ", {"LATIN_VAULT": directory}):
             fresh = AppTest.from_file(str(HERE / "streamlit_app.py"), default_timeout=30)
             fresh.session_state["pending_record"] = record
@@ -321,6 +341,28 @@ class StreamlitMorphology(unittest.TestCase):
             self.assertEqual(fresh.multiselect(key="files").value, ["ch10.md"])
             self.click(fresh, "Submit answers")
             self.assertEqual(fresh.session_state["results"]["score"]["missed"], 10)
+
+    def test_completed_record_upload_starts_a_blank_attempt(self):
+        import quiz_record
+        app = self.app(exhaustive=False, kinds=["verb"], voice="active")
+        self.click(app, "Start quiz")
+        original = deepcopy(app.session_state["quiz"])
+        app.text_input(key="ans_0_main").set_value("private response to omit")
+        app.checkbox(key="unfamiliar_0").set_value(True)
+        self.click(app, "Submit answers")
+        completed = deepcopy(app.session_state["record"])
+        self.assertIn("result", completed)
+        self.assertNotIn("private response", quiz_record.dumps(completed))
+        app.session_state["pending_record"] = quiz_record.loads(quiz_record.dumps(completed))
+        app.run()
+        self.healthy(app)
+        self.assertEqual(app.session_state["quiz"], original)
+        self.assertEqual(app.session_state["view"], "quiz")
+        self.assertIsNone(app.session_state["results"])
+        self.assertNotIn("result", app.session_state["record"])
+        self.assertTrue(all(not widget.value for widget in app.text_input))
+        self.assertFalse(app.checkbox(key="unfamiliar_0").value)
+        self.assertIn("result", completed)
 
 
 if __name__ == '__main__':
