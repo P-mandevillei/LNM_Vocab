@@ -6,6 +6,10 @@ use. It supplements the existing schema; it does not replace
 
 ## Run an update
 
+```
+./.venv/Scripts/python.exe quiz/import_morphology.py --compare
+```
+
 From the repository root:
 
 ```powershell

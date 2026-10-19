@@ -4571,6 +4571,16 @@
       "word": "corpus"
     },
     {
+      "cache_key": "3931e454d2744d221986f818771e10c575d6665c1cf44a53e3619db79f5b865c",
+      "counts": {
+        "exact": 36
+      },
+      "differences": [],
+      "pos": "adjective",
+      "status": "ready",
+      "word": "crudelis"
+    },
+    {
       "cache_key": "c39ccee178e5adc9b354c749d50da37572764cc34db368e0e3c2a90d5ce667fe",
       "counts": {
         "exact": 7
@@ -5183,6 +5193,317 @@
       "pos": "noun",
       "status": "ready",
       "word": "deus"
+    },
+    {
+      "cache_key": "88d339a3e3e774c886f49ebf3062b5eb66e87fd9b3758e0b054d63b5dba29851",
+      "counts": {
+        "compatible": 12
+      },
+      "differences": [
+        {
+          "expected": [
+            "dextra"
+          ],
+          "extra_variants": [
+            "dextera"
+          ],
+          "features": {
+            "case": "nominative",
+            "number": "singular",
+            "pos": "noun"
+          },
+          "imported": [
+            "dextra",
+            "dextera"
+          ],
+          "missing_variants": [],
+          "noun_gender": "f",
+          "quantity_difference": false,
+          "source_forms": [
+            "dēxtră",
+            "dēxtĕră"
+          ],
+          "verdict": "compatible"
+        },
+        {
+          "expected": [
+            "dextrae"
+          ],
+          "extra_variants": [
+            "dexterae"
+          ],
+          "features": {
+            "case": "genitive",
+            "number": "singular",
+            "pos": "noun"
+          },
+          "imported": [
+            "dextrae",
+            "dexterae"
+          ],
+          "missing_variants": [],
+          "noun_gender": "f",
+          "quantity_difference": false,
+          "source_forms": [
+            "dēxtrāe",
+            "dēxtĕrāe"
+          ],
+          "verdict": "compatible"
+        },
+        {
+          "expected": [
+            "dextrae"
+          ],
+          "extra_variants": [
+            "dexterae"
+          ],
+          "features": {
+            "case": "dative",
+            "number": "singular",
+            "pos": "noun"
+          },
+          "imported": [
+            "dextrae",
+            "dexterae"
+          ],
+          "missing_variants": [],
+          "noun_gender": "f",
+          "quantity_difference": false,
+          "source_forms": [
+            "dēxtrāe",
+            "dēxtĕrāe"
+          ],
+          "verdict": "compatible"
+        },
+        {
+          "expected": [
+            "dextram"
+          ],
+          "extra_variants": [
+            "dexteram"
+          ],
+          "features": {
+            "case": "accusative",
+            "number": "singular",
+            "pos": "noun"
+          },
+          "imported": [
+            "dextram",
+            "dexteram"
+          ],
+          "missing_variants": [],
+          "noun_gender": "f",
+          "quantity_difference": false,
+          "source_forms": [
+            "dēxtrăm",
+            "dēxtĕrăm"
+          ],
+          "verdict": "compatible"
+        },
+        {
+          "expected": [
+            "dextrā"
+          ],
+          "extra_variants": [
+            "dextera"
+          ],
+          "features": {
+            "case": "ablative",
+            "number": "singular",
+            "pos": "noun"
+          },
+          "imported": [
+            "dextra",
+            "dextera"
+          ],
+          "missing_variants": [],
+          "noun_gender": "f",
+          "quantity_difference": false,
+          "source_forms": [
+            "dēxtrā",
+            "dēxtĕrā"
+          ],
+          "verdict": "compatible"
+        },
+        {
+          "expected": [
+            "dextra"
+          ],
+          "extra_variants": [
+            "dextera"
+          ],
+          "features": {
+            "case": "vocative",
+            "number": "singular",
+            "pos": "noun"
+          },
+          "imported": [
+            "dextra",
+            "dextera"
+          ],
+          "missing_variants": [],
+          "noun_gender": "f",
+          "quantity_difference": false,
+          "source_forms": [
+            "dēxtră",
+            "dēxtĕră"
+          ],
+          "verdict": "compatible"
+        },
+        {
+          "expected": [
+            "dextrae"
+          ],
+          "extra_variants": [
+            "dexterae"
+          ],
+          "features": {
+            "case": "nominative",
+            "number": "plural",
+            "pos": "noun"
+          },
+          "imported": [
+            "dextrae",
+            "dexterae"
+          ],
+          "missing_variants": [],
+          "noun_gender": "f",
+          "quantity_difference": false,
+          "source_forms": [
+            "dēxtrāe",
+            "dēxtĕrāe"
+          ],
+          "verdict": "compatible"
+        },
+        {
+          "expected": [
+            "dextrārum"
+          ],
+          "extra_variants": [
+            "dexterarum"
+          ],
+          "features": {
+            "case": "genitive",
+            "number": "plural",
+            "pos": "noun"
+          },
+          "imported": [
+            "dextrarum",
+            "dexterarum"
+          ],
+          "missing_variants": [],
+          "noun_gender": "f",
+          "quantity_difference": false,
+          "source_forms": [
+            "dēxtrārŭm",
+            "dēxtĕrārŭm"
+          ],
+          "verdict": "compatible"
+        },
+        {
+          "expected": [
+            "dextrīs"
+          ],
+          "extra_variants": [
+            "dexteris"
+          ],
+          "features": {
+            "case": "dative",
+            "number": "plural",
+            "pos": "noun"
+          },
+          "imported": [
+            "dextris",
+            "dexteris"
+          ],
+          "missing_variants": [],
+          "noun_gender": "f",
+          "quantity_difference": false,
+          "source_forms": [
+            "dēxtrīs",
+            "dēxtĕrīs"
+          ],
+          "verdict": "compatible"
+        },
+        {
+          "expected": [
+            "dextrās"
+          ],
+          "extra_variants": [
+            "dexteras"
+          ],
+          "features": {
+            "case": "accusative",
+            "number": "plural",
+            "pos": "noun"
+          },
+          "imported": [
+            "dextras",
+            "dexteras"
+          ],
+          "missing_variants": [],
+          "noun_gender": "f",
+          "quantity_difference": false,
+          "source_forms": [
+            "dēxtrās",
+            "dēxtĕrās"
+          ],
+          "verdict": "compatible"
+        },
+        {
+          "expected": [
+            "dextrīs"
+          ],
+          "extra_variants": [
+            "dexteris"
+          ],
+          "features": {
+            "case": "ablative",
+            "number": "plural",
+            "pos": "noun"
+          },
+          "imported": [
+            "dextris",
+            "dexteris"
+          ],
+          "missing_variants": [],
+          "noun_gender": "f",
+          "quantity_difference": false,
+          "source_forms": [
+            "dēxtrīs",
+            "dēxtĕrīs"
+          ],
+          "verdict": "compatible"
+        },
+        {
+          "expected": [
+            "dextrae"
+          ],
+          "extra_variants": [
+            "dexterae"
+          ],
+          "features": {
+            "case": "vocative",
+            "number": "plural",
+            "pos": "noun"
+          },
+          "imported": [
+            "dextrae",
+            "dexterae"
+          ],
+          "missing_variants": [],
+          "noun_gender": "f",
+          "quantity_difference": false,
+          "source_forms": [
+            "dēxtrāe",
+            "dēxtĕrāe"
+          ],
+          "verdict": "compatible"
+        }
+      ],
+      "pos": "noun",
+      "status": "ready",
+      "word": "dextra"
     },
     {
       "cache_key": "a35e173707c59f9c1afc79435413affabe474151ffb8f50fadb49b0494c59530",
@@ -11216,6 +11537,16 @@
       "word": "invideō"
     },
     {
+      "cache_key": "2a820d1a1125d0cfb99c0098cd0a126053860f3ee9534779fc298eb5b78e2fd5",
+      "counts": {
+        "exact": 12
+      },
+      "differences": [],
+      "pos": "noun",
+      "status": "ready",
+      "word": "ira"
+    },
+    {
       "cache_key": "d085b5d5ad64e2ba35280d09401e2f901fbae8df15680b54cf7c3bda26571598",
       "counts": {
         "compatible": 14
@@ -17234,6 +17565,26 @@
       "word": "nauta"
     },
     {
+      "cache_key": "9eed2ac8c4a09f74f40229bf936e7449e841e57abe9a19bba88cdd8c7ecd0b7d",
+      "counts": {
+        "exact": 36
+      },
+      "differences": [],
+      "pos": "adjective",
+      "status": "ready",
+      "word": "noster"
+    },
+    {
+      "cache_key": "beadd3339994811a74111f376f5108e53a900d24a94c927202021ad66e1a6344",
+      "counts": {
+        "exact": 36
+      },
+      "differences": [],
+      "pos": "adjective",
+      "status": "ready",
+      "word": "novus"
+    },
+    {
       "cache_key": "3671b04d8a14bc27ce0e1f4fd4f64f6d7cb36149c651c6cf02a0f80f8283d57f",
       "counts": {
         "exact": 12
@@ -21840,6 +22191,16 @@
       "word": "pāx"
     },
     {
+      "cache_key": "3cb19746fd58a551c6da54a5b3ef565a9aa3c79eb7ca68674677d4d4e84dfdea",
+      "counts": {
+        "exact": 12
+      },
+      "differences": [],
+      "pos": "noun",
+      "status": "ready",
+      "word": "regina"
+    },
+    {
       "cache_key": "775d98af540148add8c6f5c75bbfbbe9d9bebfa47455f0028141205feb6cde1d",
       "counts": {
         "exact": 12
@@ -22767,6 +23128,26 @@
       "word": "sevērus"
     },
     {
+      "cache_key": "cf03453413da4e114d93e8ec593403da22fffd93ea8456ee135ab6a249296742",
+      "counts": {
+        "exact": 12
+      },
+      "differences": [],
+      "pos": "noun",
+      "status": "ready",
+      "word": "silva"
+    },
+    {
+      "cache_key": "a2a7cfc10b9e26754e39038ba98e6cf305436de05a28396c2b32e578d3064e19",
+      "counts": {
+        "exact": 36
+      },
+      "differences": [],
+      "pos": "adjective",
+      "status": "ready",
+      "word": "similis"
+    },
+    {
       "cache_key": "877398c9861c666089065b23f30aad8028399985a4f5dc3c1ef699b32523aba5",
       "counts": {
         "exact": 7
@@ -22810,6 +23191,16 @@
       "pos": "noun",
       "status": "ready",
       "word": "soror"
+    },
+    {
+      "cache_key": "4e32a17892ab0cbfe778caef23266663a622061a2b1ae1257433da19f04ed4de",
+      "counts": {
+        "exact": 12
+      },
+      "differences": [],
+      "pos": "noun",
+      "status": "ready",
+      "word": "spelunca"
     },
     {
       "cache_key": "063e1edfebbf4c98b484348d532e707fc5772e6224e43e71a6f2f95afa722d14",
@@ -22915,6 +23306,16 @@
       "pos": "verb",
       "status": "ready",
       "word": "sum"
+    },
+    {
+      "cache_key": "596bfc530b5622e80de0c2484a7283f64fea4df452a031b7f2f0b2d492f8863d",
+      "counts": {
+        "exact": 36
+      },
+      "differences": [],
+      "pos": "adjective",
+      "status": "ready",
+      "word": "tantus"
     },
     {
       "cache_key": "0c7291c14d0929cb5ec4d96d5532145e909c75271a3570f323cd58659279f610",
@@ -23971,6 +24372,45 @@
       "word": "timor"
     },
     {
+      "cache_key": "d7f61542e944d03f7471fa84a711914a786b52f20277d862f4ab4dfee7fa3bb6",
+      "counts": {
+        "conflict": 1,
+        "exact": 35
+      },
+      "differences": [
+        {
+          "expected": [
+            "tue"
+          ],
+          "extra_variants": [
+            "tuus"
+          ],
+          "features": {
+            "case": "vocative",
+            "degree": "positive",
+            "gender": "m",
+            "number": "singular",
+            "pos": "adjective"
+          },
+          "imported": [
+            "tuus"
+          ],
+          "missing_variants": [
+            "tue"
+          ],
+          "noun_gender": "m",
+          "quantity_difference": false,
+          "source_forms": [
+            "tŭŭs"
+          ],
+          "verdict": "conflict"
+        }
+      ],
+      "pos": "adjective",
+      "status": "ready",
+      "word": "tuus"
+    },
+    {
       "cache_key": "4bf9db937c3759b10f8c7f661464888946d6ce025089ea77746f7cda1a929a8c",
       "counts": {
         "exact": 12
@@ -24543,6 +24983,16 @@
       "pos": "noun",
       "status": "ready",
       "word": "verbum"
+    },
+    {
+      "cache_key": "0061a14a6ac63e2718d3893e1f411dc3fa992b2ca83d91b5572bd957ff5d7057",
+      "counts": {
+        "exact": 36
+      },
+      "differences": [],
+      "pos": "adjective",
+      "status": "ready",
+      "word": "vester"
     },
     {
       "cache_key": "98adf9539044f336b8ed08a5564e3ea840776e58fd27b9588a71e35d85766914",
@@ -25598,13 +26048,13 @@
     }
   ],
   "summary": {
-    "compared_lemmas": 147,
-    "compatible": 175,
-    "conflict": 4,
-    "exact": 1975,
+    "compared_lemmas": 159,
+    "compatible": 187,
+    "conflict": 5,
+    "exact": 2274,
     "missing": 0,
     "quantity_differences": 1002,
-    "reference_cells": 2154,
-    "reference_lemmas": 147
+    "reference_cells": 2466,
+    "reference_lemmas": 159
   }
 }
