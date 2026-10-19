@@ -22,6 +22,7 @@ import vocab
 import morphology as morphology_engine
 import quiz_record
 import streamlit_records as records
+import streamlit_accounts as accounts
 from sheet import MODE_LABEL, render_sheet
 from streamlit_morphology import render as morphology_tab
 
@@ -138,6 +139,7 @@ def begin_quiz(questions: list[dict], title: str, files: list[str],
         quiz_mode=mode, quiz_parsing=parsing, results=None, missed=[],
         record=quiz_record.make_record("vocabulary", opts, questions, retest, compact=True),
     )
+    accounts.begin_attempt("vocabulary")
 
 
 # ---------------------------------------------------------------------------
@@ -320,6 +322,7 @@ def quiz_view() -> None:
         ]
         graded = vocab.grade(questions, answers)
         st.session_state.record = quiz_record.with_result(st.session_state.record, questions, graded)
+        accounts.completed("vocabulary", st.session_state.record, questions, graded)
         st.session_state.results = graded
         st.session_state.missed = graded["missed"]
         st.session_state.view = "results"
@@ -370,6 +373,7 @@ def results_view(chapters: dict) -> None:
     graded = st.session_state.results
     s = graded["score"]
     st.title("Results")
+    accounts.save_status("vocabulary")
 
     pct = round(s["main_correct"] / s["main_total"] * 100) if s["main_total"] else 0
     detail = f"{pct}% on vocabulary"
@@ -420,8 +424,15 @@ def start_retest(selection="wrong") -> None:
 # ---------------------------------------------------------------------------
 
 def main() -> None:
+    account = accounts.context()
     init_state()
     records.restore_pending(VAULT)
+    accounts.sidebar(account)
+    accounts.flush_pending(account)
+    if st.session_state.account_page == "Account":
+        accounts.preserve_practice_state()
+        accounts.dashboard(account, VAULT)
+        return
     records.upload_section()
     if not VAULT.is_dir():
         st.warning(f"No chapter folder at {VAULT}. Upload a record or set $LATIN_VAULT.")
@@ -431,7 +442,8 @@ def main() -> None:
         st.warning(f"No chapter markdown files found in {VAULT}. You can still upload a test record.")
 
     opts = sidebar(chapters)
-    vocabulary, morphology = st.tabs(["Vocabulary", "Declension & conjugation"])
+    vocabulary, morphology = st.tabs(["Vocabulary", "Declension & conjugation"],
+                                     default=st.session_state.get("_practice_tab", "Vocabulary"))
     with vocabulary:
         view = st.session_state.view
         if view == "quiz" and st.session_state.quiz:

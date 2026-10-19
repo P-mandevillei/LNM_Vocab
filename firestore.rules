@@ -1,0 +1,10 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Streamlit accesses Firestore on the server with its service account.
+    // Ownership is enforced in firestore_history.py; direct clients get no access.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

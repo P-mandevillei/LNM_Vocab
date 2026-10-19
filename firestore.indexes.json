@@ -1,0 +1,8 @@
+{
+  "indexes": [],
+  "fieldOverrides": [
+    {"collectionGroup": "attempts", "fieldPath": "payload", "indexes": []},
+    {"collectionGroup": "attempts", "fieldPath": "source_attempt_ids", "indexes": []},
+    {"collectionGroup": "attempts", "fieldPath": "files", "indexes": []}
+  ]
+}

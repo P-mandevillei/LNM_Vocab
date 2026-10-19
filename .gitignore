@@ -1,6 +1,8 @@
 __pycache__/
 *.pyc
 .venv/
+.streamlit/secrets.toml
+.streamlit/private/
 
 # Obsidian per-machine state; the vault's own settings are worth keeping.
 .obsidian/workspace.json

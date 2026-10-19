@@ -29,6 +29,26 @@ and missed entries, so starting or retesting one does not replace the other.
 Morphology tables use the same chapter 10 definitions, live `morphology.json`
 overrides and original-answer retesting as the plain server.
 
+## Accounts and saved history
+
+Use **Sign in with Google** in the sidebar before starting a test. Submitted
+tests save to your account in Firebase Cloud Firestore. **Page → Account**
+shows historical scores, individual test details, and buttons to retest every
+entry or just the incorrect entries. The recent-history summary defaults to
+the latest 10 tests, with choices of 5, 10, 20 or 50. Recent mistake practice
+combines distinct incorrect question variants from that window, separately
+for vocabulary and morphology, even if a later test answered them correctly.
+
+Stored records contain entry references, score totals, incorrect-field
+positions and unfamiliar flags; submitted answers and expanded answer tables
+are omitted. Save failures remain queued in the current browser session with
+an explicit retry button. Guest practice and record downloads remain available.
+
+Google OAuth and Firestore service-account credentials are configured through
+Streamlit secrets. Follow [Account setup](ACCOUNTS_SETUP.md) for Community
+Cloud instructions and secure credential-file handling. Sign-in is disabled
+until setup is complete. Do not commit real credentials or paste them into chat.
+
 ## Deploying to Streamlit Community Cloud
 
 The repo is already set up for it — `requirements.txt` and `.streamlit/` sit at
@@ -216,8 +236,9 @@ answer keys, even without their original chapters. The legacy plain server's
 version 1 export and restore behavior is unchanged; version 2 records are for
 Streamlit.
 
-Streamlit requires version 1.43 or newer so downloading a record does not
-rerun the app and discard answers in progress. See the
+The current app requires Streamlit 1.65 or newer for account login and practice
+tab navigation. Downloading a record does not rerun the app and discard answers
+in progress, a feature available since 1.43. See the
 [Streamlit release notes](https://docs.streamlit.io/develop/quick-reference/release-notes/2025#version-1430).
 
 ## Unfamiliar entries and review
@@ -406,6 +427,12 @@ python -B -m unittest discover -s quiz -p 'test_*.py'
 - `streamlit_morphology.py` — the Streamlit morphology tab over the shared engine
 - `quiz_record.py` — portable record validation and review/re-test selection
 - `streamlit_records.py` — shared Streamlit record controls and review grouping
+- `streamlit_accounts.py` — Google login, save queue and account dashboard
+- `account_history.py` — stable account IDs, compressed saved attempts and cumulative practice
+- `firestore_history.py` — account-scoped Firestore reads, pagination and idempotent writes
+- `configure_accounts.py` — builds ignored secrets from downloaded credential files
+- `ACCOUNTS_SETUP.md` — Google/Firebase configuration and live verification instructions
+- `test_account_history.py`, `test_streamlit_accounts.py` — account isolation, storage and dashboard workflows
 - `test_records.py` — record replay, validation and re-test selection regressions
 - `test_reference_records.py` — compact record reconstruction, sparse results and size regressions
 - `sheet.py` — builds the downloadable worksheet as one self-contained file

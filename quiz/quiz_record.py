@@ -118,7 +118,11 @@ def _reference(q, kind):
     clean = {"entry": q["entry"]}
     if kind == "vocabulary":
         _require(q.get("direction") in MODES[:2], "Invalid question direction in record.")
-        return {**clean, "direction": q["direction"]}
+        clean["direction"] = q["direction"]
+        if "parsing" in q:
+            _require(type(q["parsing"]) is bool, "Invalid question parsing setting in record.")
+            clean["parsing"] = q["parsing"]
+        return clean
     _require(isinstance(q.get("kind"), str) and q["kind"] in morphology.KINDS,
              "Invalid morphology entry type in record.")
     clean["kind"] = q["kind"]
@@ -140,6 +144,8 @@ def _reference_from_question(q, index, kind):
     ref = {"entry": q.get("entry_key")}
     if kind == "vocabulary":
         ref["direction"] = q.get("direction")
+        if "record_parsing" in q:
+            ref["parsing"] = q["record_parsing"]
     else:
         ref["kind"] = q.get("kind")
         keys = ("voice", "tense", "mood") if ref["kind"] == "verb" else ("gender",)
@@ -232,12 +238,16 @@ def reconstruct(record, vault):
         # Group by direction so repeated occurrences of one word may retain
         # different directions. The full selected pool supplies accepted twins.
         for direction in MODES[:2]:
-            indices = [i for i, ref in enumerate(refs) if ref["direction"] == direction]
-            generated = vocab.make_questions([entries[refs[i]["entry"]] for i in indices],
-                                             pool, direction, opts["parsing"])
-            for index, question in zip(indices, generated):
-                question["index"] = index
-                questions[index] = question
+            for parsing in (False, True):
+                indices = [i for i, ref in enumerate(refs) if ref["direction"] == direction
+                           and ref.get("parsing", opts["parsing"]) == parsing]
+                generated = vocab.make_questions([entries[refs[i]["entry"]] for i in indices],
+                                                 pool, direction, parsing)
+                for index, question in zip(indices, generated):
+                    question["index"] = index
+                    if "parsing" in refs[index]:
+                        question["record_parsing"] = parsing
+                    questions[index] = question
     else:
         # Resolve individual words first. A recorded pair supplies its actual
         # adjective instead of rerunning the random pair-selection algorithm.

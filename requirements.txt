@@ -1,1 +1,2 @@
-streamlit>=1.43
+streamlit[auth]>=1.65,<2
+google-cloud-firestore>=2.21,<3

@@ -3,6 +3,7 @@
 import streamlit as st
 
 import quiz_record
+import streamlit_accounts as accounts
 
 
 def upload_changed():
@@ -20,6 +21,7 @@ def restore_pending(vault):
     pending = st.session_state.pop("pending_record", None)
     if pending is None:
         return
+    source_ids = st.session_state.pop("_account_pending_source_ids", [])
     # Validate before changing any existing quiz or widget preference.
     try:
         record = quiz_record.validate(pending)
@@ -54,6 +56,8 @@ def restore_pending(vault):
                              f"{prefix}record": record,
                              f"{prefix}retest_selection": opts.get("retest_selection", "wrong")})
     st.session_state.record_notice = ("Declension & conjugation" if prefix else "Vocabulary")
+    st.session_state["_practice_tab"] = st.session_state.record_notice
+    accounts.begin_attempt(kind, source_ids)
 
 
 def upload_section():

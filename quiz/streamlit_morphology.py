@@ -12,6 +12,7 @@ import streamlit as st
 import morphology as m
 import quiz_record
 import streamlit_records as records
+import streamlit_accounts as accounts
 
 
 KIND_LABELS = {
@@ -55,6 +56,7 @@ def begin_quiz(questions, opts, title="Declension & conjugation", retest=False):
     st.session_state.update(morph_view="quiz", morph_quiz=questions,
                             morph_title=title, morph_results=None, morph_missed=[],
                             morph_record=quiz_record.make_record("morphology", opts, questions, retest, compact=True))
+    accounts.begin_attempt("morphology")
 
 
 def settings(shared):
@@ -185,6 +187,7 @@ def quiz_view():
                    for question in questions]
         graded = m.grade(questions, answers)
         st.session_state.morph_record = quiz_record.with_result(st.session_state.morph_record, questions, graded)
+        accounts.completed("morphology", st.session_state.morph_record, questions, graded)
         st.session_state.update(morph_results=graded, morph_missed=graded["missed"], morph_view="results")
         st.rerun()
 
@@ -229,6 +232,7 @@ def results_view():
     graded = st.session_state.morph_results
     score = graded["score"]
     st.subheader("Morphology results")
+    accounts.save_status("morphology")
     st.markdown(f'**{score["entry_correct"]} / {score["entry_total"]} entries correct** · '
                 f'{score["field_correct"]} / {score["field_total"]} cells correct')
     counts = quiz_record.retest_counts("morphology", st.session_state.morph_quiz, graded["results"])
