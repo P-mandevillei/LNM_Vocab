@@ -53,6 +53,12 @@ and temporary `error` states. **Ready does not mean linguistically approved.**
 Successful and permanent negative results do not expire. Temporary errors have
 a retry time; explicit retry flags can retry them sooner.
 
+Missing or unresolved words are recorded and omitted from imported answer
+tables while the remaining lookups continue. Lookup errors also allow later
+words to finish, but the command exits with status 1 to report those errors.
+Console output preserves macrons when supported and escapes unsupported
+characters on older Windows encodings; cache and report files retain Unicode.
+
 Atomic replacement and a single-writer lock protect the cache. Successful
 acquisitions are checkpointed after each word, so interrupted imports resume.
 Windows sync/indexing file locks receive bounded retries. Failed refreshes

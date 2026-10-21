@@ -63,6 +63,7 @@ PLACEHOLDER_RE = re.compile(r"^[_\-–—?~.\s]+$")
 # "iussum + accusative + infinitive", "cum + ablative"
 ANNOTATION_SPLIT_RE = re.compile(r"\s*\+\s*")
 PAREN_RE = re.compile(r"\s*\(([^)]*)\)")
+NUMBER_NOTE_RE = re.compile(r"(?:pl(?:ural)?|sg|sing(?:ular)?)\.?", re.IGNORECASE)
 
 
 @dataclass
@@ -95,8 +96,14 @@ class Entry:
 
     @property
     def english_core(self) -> str:
-        """Gloss without parenthetical notes -- used for prompts and matching."""
-        core = PAREN_RE.sub("", self.english).strip()
+        """Gloss with number qualifiers, without explanatory parenthetical notes.
+
+        Prompts and twin matching must distinguish "you (sg.)" from "you (pl.)".
+        """
+        core = PAREN_RE.sub(
+            lambda match: match.group(0)
+            if NUMBER_NOTE_RE.fullmatch(match.group(1).strip()) else "",
+            self.english).strip()
         core = re.sub(r"\s+", " ", core).strip(" ,;")
         return core or self.english
 

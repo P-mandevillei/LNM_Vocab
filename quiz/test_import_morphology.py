@@ -1,8 +1,10 @@
 """Live-response parser fixtures, incremental state and legacy-schema safety."""
 
 from copy import deepcopy
+import io
 import json
 from pathlib import Path
+import sys
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch
@@ -131,6 +133,68 @@ class IncrementalImport(unittest.TestCase):
 
     def run_import(self, client, **kwargs):
         return importer.import_tables(self.vault, self.cache, client=client, progress=lambda text: None, **kwargs)
+
+    def run_cli(self, *args, encoding="cp1252"):
+        buffer = io.BytesIO()
+        output = io.TextIOWrapper(buffer, encoding=encoding)
+        argv = ["import_morphology.py", "--vault", str(self.vault), "--cache", str(self.cache), *args]
+        with patch.object(sys, "argv", argv), patch.object(sys, "stdout", output):
+            status = importer.main()
+        output.flush()
+        return status, buffer.getvalue().decode(encoding)
+
+    def test_cli_omits_missing_macron_word_and_imports_next_word(self):
+        self.chapter("**ADJECTIVES**\nLūnātus, lūnāta, lūnātum - moon-shaped\n"
+                     "**NOUNS**\naqua, aquae, f. - water\n")
+        client = FakeClient({"Lunatus": b""})
+        with patch.object(p, "CollatinusClient", return_value=client):
+            status, output = self.run_cli("--compare")
+        self.assertEqual(status, 0)
+        self.assertEqual(client.calls, ["Lunatus", "aqua"])
+        records = {r["request"]["query"]: r for r in load_cache(self.cache)["entries"].values()}
+        self.assertEqual(records["Lūnātus"]["status"], "not_found")
+        self.assertEqual(records["aqua"]["status"], "ready")
+        self.assertIn(r"L\u016bn\u0101tus: not_found", output)
+        self.assertIn("noun aqua: ready", output)
+        self.assertTrue((self.vault / "morphology_comparison.json").exists())
+        self.assertTrue((self.vault / "MORPHOLOGY_AUDIT.md").exists())
+        self.assertFalse(Path(str(self.cache) + ".lock").exists())
+
+    def test_cli_lookup_error_does_not_stop_later_words(self):
+        self.chapter("**ADJECTIVES**\nLūnātus, lūnāta, lūnātum - moon-shaped\n"
+                     "**NOUNS**\naqua, aquae, f. - water\n")
+        client = FakeClient({"Lunatus": URLError("fixture lookup failure")})
+        with patch.object(p, "CollatinusClient", return_value=client):
+            status, output = self.run_cli("--compare")
+        self.assertEqual(status, 1)
+        self.assertEqual(client.calls, ["Lunatus", "aqua"])
+        self.assertIn("noun aqua: ready", output)
+        self.assertIn('"errors": 1', output)
+        self.assertTrue((self.vault / "MORPHOLOGY_AUDIT.md").exists())
+
+    def test_cli_check_reports_missing_macron_word_without_encoding_error(self):
+        self.chapter("**ADJECTIVES**\nLūnātus, lūnāta, lūnātum - moon-shaped\n")
+        with patch.object(p, "CollatinusClient", side_effect=AssertionError("Offline network call")):
+            status, output = self.run_cli("--check")
+        self.assertEqual(status, 1)
+        self.assertIn(r"Unacquired entries: L\u016bn\u0101tus", output)
+        self.assertIn("Would acquire:", output)
+
+    def test_cli_comparison_with_no_reference_cells(self):
+        self.chapter("**PRONOUNS**\nquī - who\n")
+        with patch.object(p, "CollatinusClient", return_value=FakeClient({"qui": b""})):
+            status, output = self.run_cli("--compare")
+        self.assertEqual(status, 0)
+        report = json.loads((self.vault / "morphology_comparison.json").read_text(encoding="utf-8"))
+        self.assertEqual(report["summary"]["reference_cells"], 0)
+        markdown = (self.vault / "MORPHOLOGY_AUDIT.md").read_text(encoding="utf-8")
+        self.assertIn("No legacy-reference drill cells are available for comparison.", markdown)
+
+    def test_cli_preserves_macrons_on_utf8_output(self):
+        self.chapter("**ADJECTIVES**\nLūnātus, lūnāta, lūnātum - moon-shaped\n")
+        status, output = self.run_cli("--dry-run", encoding="utf-8")
+        self.assertEqual(status, 0)
+        self.assertIn("Would acquire: adjective Lūnātus", output)
 
     def test_unchanged_update_has_zero_calls_and_identical_cache(self):
         self.chapter("**VERBS**\ncapio, capere, cepi, captum - take\n")

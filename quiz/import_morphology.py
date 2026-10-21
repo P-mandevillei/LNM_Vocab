@@ -14,6 +14,7 @@ import hashlib
 import json
 from pathlib import Path
 import re
+import sys
 from urllib.error import HTTPError, URLError
 
 import collatinus as provider
@@ -24,6 +25,13 @@ import vocab
 
 HERE = Path(__file__).resolve().parent
 INFLECTABLE = {"noun", "adjective", "verb", "pronoun", "numeral", "participle"}
+
+
+def console_print(text):
+    """Keep progress usable on legacy Windows consoles and redirected output."""
+    encoding = getattr(sys.stdout, "encoding", None) or "utf-8"
+    printable = str(text).encode(encoding, errors="backslashreplace").decode(encoding)
+    print(printable, flush=True)
 
 
 def digest(value):
@@ -131,7 +139,7 @@ def resolve(candidates, request):
 
 def import_tables(vault, cache_path=DEFAULT_CACHE, *, client=None, dry_run=False, offline=False,
                   retry_errors=False, retry_missing=False, refresh=(), limit=None, reparse=False,
-                  progress=print):
+                  progress=console_print):
     cache_path = Path(cache_path)
     data = load_cache(cache_path)
     requests, bindings, skipped, _ = inventory(vault)
@@ -310,6 +318,9 @@ def approve_entry(data, key):
 def comparison_markdown(report, data):
     s = report["summary"]
     conflicts = [(r, d) for r in report["records"] for d in r["differences"] if d["verdict"] in ("conflict", "missing")]
+    agreement = (f"At least one old accepted spelling occurs in {(s['exact'] + s['compatible']) / s['reference_cells']:.2%} of compared cells. "
+                 "This is agreement with the reference, not independent proof that every imported variant is correct."
+                 if s["reference_cells"] else "No legacy-reference drill cells are available for comparison.")
     lines = ["# Morphology import accuracy audit", "",
         "Generated offline from the saved Collatinus responses. Imported answers were not filled or corrected using the old schema.", "",
         f"- Cached lookup identities: {len(data['entries'])} (including two pronouns and the locative lookup domī).",
@@ -319,8 +330,7 @@ def comparison_markdown(report, data):
         f"| Same accepted forms, disregarding quantity marks | {s['exact']} |",
         f"| Overlapping accepted forms with variant differences | {s['compatible']} |",
         f"| Disjoint answers | {s['conflict']} |", f"| Missing answers | {s['missing']} |", "",
-        f"At least one old accepted spelling occurs in {(s['exact'] + s['compatible']) / s['reference_cells']:.2%} of compared cells. "
-        "This is agreement with the reference, not independent proof that every imported variant is correct.", "",
+        agreement, "",
         f"Quantity annotations differ in {s['quantity_differences']} cells that otherwise overlap. "
         "The cache retains the raw annotations, but imported grading forms omit quantity marks and have quantities_known=false. "
         "The old schema remains authoritative for reviewed quantities.", "",
@@ -369,14 +379,14 @@ def main():
     with cache_lock(args.cache):
         stats = import_tables(args.vault, args.cache, dry_run=args.dry_run, offline=args.offline or bool(args.approve) or args.check,
                               retry_errors=args.retry_errors, retry_missing=args.retry_missing, refresh=args.refresh,
-                              limit=args.limit, reparse=args.reparse, progress=lambda text: print(text, flush=True))
+                              limit=args.limit, reparse=args.reparse, progress=console_print)
         if args.approve:
             data = load_cache(args.cache)
             for key in args.approve:
                 approve_entry(data, key)
             if not args.dry_run:
                 save_json(args.cache, data)
-        print(json.dumps(stats, sort_keys=True))
+        console_print(json.dumps(stats, sort_keys=True))
         if args.compare:
             report = compare(args.vault, args.cache)
             if not args.dry_run:
@@ -385,13 +395,13 @@ def main():
                 target = args.cache.parent / "MORPHOLOGY_AUDIT.md"
                 if not target.exists() or target.read_text(encoding="utf-8") != markdown:
                     target.write_text(markdown, encoding="utf-8")
-            print(json.dumps(report["summary"], sort_keys=True))
+            console_print(json.dumps(report["summary"], sort_keys=True))
         if args.check:
             requests, _, _, _ = inventory(args.vault)
             entries = load_cache(args.cache)["entries"]
             unavailable = [r["query"] for key, r in requests.items() if entries.get(key, {}).get("status") != "ready"]
             if unavailable:
-                print("Unacquired entries: " + ", ".join(unavailable))
+                console_print("Unacquired entries: " + ", ".join(unavailable))
                 return 1
     return 1 if stats["errors"] else 0
 
