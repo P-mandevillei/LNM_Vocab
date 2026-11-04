@@ -227,8 +227,8 @@ def reconstruct(record, vault):
     if record["version"] == VERSION:
         return record["questions"]
     kind, opts, refs = record["kind"], record["configuration"], record["questions"]
-    chapters = vocab.load_vault(vault)
-    pool = [entry for name, entries in chapters.items() if name in opts["files"] for entry in entries]
+    chapters = vocab.load_vault(vault, opts["files"])
+    pool = [entry for entries in chapters.values() for entry in entries]
     entries = {entry.key: entry for entry in pool}
     needed = {ref[key] for ref in refs for key in ("entry", "adjective") if key in ref}
     for key in sorted(needed):
@@ -254,10 +254,12 @@ def reconstruct(record, vault):
         all_opts = morphology.options({"kinds": ["noun", "adjective", "verb"],
                                        "voices": list(morphology.VOICES),
                                        "tenses": list(morphology.TENSES), "moods": list(morphology.MOODS)})
+        sources = morphology.table_sources(vault)
         candidates, _, _ = morphology.candidates(
             [entry for entry in pool if entry.key in needed], all_opts,
-            lexicon=morphology.load_lexicon(vault, include_cache=False), sources=morphology.table_sources(vault))
-        available = {candidate["entry"].key: candidate for candidate in candidates}
+            lexicon=morphology.load_lexicon(vault, include_cache=False), sources=sources)
+        available = {candidate["entry"].key: candidate
+                     for candidate in morphology.hydrate_candidates(candidates, sources)}
         for index, ref in enumerate(refs):
             _require(ref["entry"] in available, f"Morphology is unavailable for recorded entry {ref['entry']!r}.")
             candidate = dict(available[ref["entry"]])

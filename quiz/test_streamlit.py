@@ -55,6 +55,36 @@ class StreamlitMorphology(unittest.TestCase):
     def healthy(self, app):
         self.assertEqual([e.message for e in app.exception], [])
 
+    def test_vocabulary_loads_only_selected_reading_chapters_on_start(self):
+        import vocab
+        with TemporaryDirectory() as directory, patch.dict("os.environ", {"LATIN_VAULT": directory}):
+            vault = Path(directory)
+            names = ["ch9.md", "ch10.md", "ch9_Reading.md", "ch10_reading.md"]
+            for name in names:
+                (vault / name).write_text("**NOUNS**\nrosa, rosae, f. - rose\n", encoding="utf-8")
+            with patch.object(vocab, "parse_file", wraps=vocab.parse_file) as parse:
+                app = AppTest.from_file(str(HERE / "streamlit_app.py"), default_timeout=30).run()
+                self.healthy(app)
+                self.assertEqual(app.multiselect(key="files").options, names)
+                self.assertEqual([call.args[0].name for call in parse.call_args_list], ["ch10.md", "ch9.md"])
+
+                app.multiselect(key="files").set_value(["ch9_Reading.md"]).run()
+                self.assertEqual(parse.call_count, 2)
+                self.click(app, "Start quiz")
+                self.assertEqual({q["source"] for q in app.session_state.quiz}, {"ch9_Reading.md"})
+                app.run()
+                self.assertEqual([call.args[0].name for call in parse.call_args_list],
+                                 ["ch10.md", "ch9.md", "ch9_Reading.md"])
+
+                reading = vault / "ch9_Reading.md"
+                reading.write_text("**NOUNS**\nporta, portae, f. - a gate\n", encoding="utf-8")
+                app.session_state["_practice_tab"] = "Declension & conjugation"
+                app.run()
+                self.healthy(app)
+                self.assertFalse(app.button(key="morph_start").disabled)
+                self.assertEqual(vocab.load_chapter(reading, vault)[0].headword, "porta")
+                self.assertEqual(parse.call_count, 4)
+
     def click(self, app, label):
         next(b for b in app.button if b.label == label).click().run()
         self.healthy(app)

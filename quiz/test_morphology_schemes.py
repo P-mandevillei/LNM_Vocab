@@ -2,14 +2,18 @@
 
 from copy import deepcopy
 import json
+import os
 from pathlib import Path
 import random
 from tempfile import TemporaryDirectory
 import unittest
+from unittest.mock import patch
 
 import morphology as m
 import morphology_answers as a
-from morphology_cache import TableSources, empty_cache, table_sources, save_json
+from morphology_cache import TableSources, empty_cache, load_cache, table_sources, save_json
+from morphology_store import SQLiteTableSources, compile_store
+import quiz_record
 import vocab
 
 
@@ -176,6 +180,53 @@ class AnswerSchemes(unittest.TestCase):
             data["skipped"]["new"] = {"reason": "test"}
             save_json(path, data)
             self.assertIsNot(table_sources(directory), first)
+
+    def test_sqlite_preview_draw_and_restore_read_only_the_drawn_pair(self):
+        sources = table_sources(VAULT)
+        self.assertIsInstance(sources, SQLiteTableSources)
+        opts = m.options({"kinds": ["pair"], "count": 1, "shuffle": False})
+        with patch.object(sources, "load_records", wraps=sources.load_records) as load:
+            available, _, _ = m.candidates(self.pool, opts, sources=sources)
+            load.assert_not_called()
+
+            quiz = m.build_quiz(self.pool, opts, random.Random(5), sources=sources)
+            record = quiz_record.make_record("morphology", {**opts, "files": ["ch10.md"]},
+                                             quiz["questions"], compact=True)
+            ref = record["questions"][0]
+            pair = next(c for c in available if c["entry"].key == ref["entry"]
+                        and c["adjective"].key == ref["adjective"])
+            expected = {pair["record"].record_id, pair["adjective_record"].record_id}
+            self.assertEqual(len(expected), 2)
+            load.assert_called_once_with(expected)
+
+            load.reset_mock()
+            self.assertEqual(quiz_record.reconstruct(record, VAULT), quiz["questions"])
+            load.assert_called_once_with(expected)
+
+        legacy = TableSources(load_cache())
+        self.assertEqual(quiz, m.build_quiz(self.pool, opts, random.Random(5), sources=legacy))
+
+    def test_sqlite_snapshot_falls_back_on_same_size_json_edit(self):
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "morphology_cache.json"
+            data = empty_cache()
+            data["skipped"]["word"] = {"reason": "old"}
+            save_json(path, data)
+            database = compile_store(path)
+            first = table_sources(directory)
+            self.assertIsInstance(first, SQLiteTableSources)
+            stamp = database.stat().st_mtime_ns
+            compile_store(path)
+            self.assertEqual(database.stat().st_mtime_ns, stamp)
+
+            data["skipped"]["word"]["reason"] = "new"
+            save_json(path, data)
+            os.utime(path, ns=(stamp, stamp + 1_000_000_000))
+            self.assertIsInstance(table_sources(directory), TableSources)
+            compile_store(path)
+            current = table_sources(directory)
+            self.assertIsInstance(current, SQLiteTableSources)
+            self.assertNotEqual(current.snapshot, first.snapshot)
 
     def test_unclassified_verb_can_use_a_complete_cached_passive(self):
         entry = vocab.Entry(["fixtureo", "fixturere"], "fixture", "verb", "new.md", 1,

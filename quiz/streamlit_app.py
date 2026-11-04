@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import os
 import random
+import re
 from html import escape
 from pathlib import Path
 
@@ -89,24 +90,8 @@ st.markdown(CSS, unsafe_allow_html=True)
 # chapter loading
 # ---------------------------------------------------------------------------
 
-def vault_stamp() -> tuple:
-    """Changes whenever a chapter file is edited, so the cache reloads."""
-    return tuple(sorted(
-        (p.name, p.stat().st_mtime_ns, p.stat().st_size)
-        for p in vocab.find_markdown_files(VAULT)
-    ))
-
-
-@st.cache_data(show_spinner=False)
-def load_chapters(stamp: tuple, vault_path: str) -> dict[str, list[vocab.Entry]]:
-    # Underscore-prefixed arguments are excluded from Streamlit cache keys.
-    # Include both the chapter stamp and vault path so edits/new vaults reload.
-    return vocab.load_vault(Path(vault_path))
-
-
-def pool_for(chapters: dict, files: list[str]) -> list[vocab.Entry]:
-    return [e for name, entries in chapters.items() if name in files
-            for e in entries]
+def load_pool(paths, files) -> list[vocab.Entry]:
+    return [entry for entries in vocab.load_chapters(VAULT, paths, files).values() for entry in entries]
 
 
 # ---------------------------------------------------------------------------
@@ -146,8 +131,13 @@ def begin_quiz(questions: list[dict], title: str, files: list[str],
 # sidebar: what to be asked
 # ---------------------------------------------------------------------------
 
-def sidebar(chapters: dict) -> dict:
-    names = list(dict.fromkeys([*chapters, *st.session_state.get("files", [])]))
+def chapter_picker_key(name: str):
+    number = re.search(r"[0-9]+", Path(name).stem)
+    return vocab.is_reading_chapter(name), int(number[0]) if number else float("inf"), name.casefold()
+
+
+def sidebar(paths, chapters: dict) -> dict:
+    names = sorted(dict.fromkeys([*paths, *st.session_state.get("files", [])]), key=chapter_picker_key)
     with st.sidebar:
         st.subheader("Chapters")
         if "files" not in st.session_state:
@@ -162,14 +152,16 @@ def sidebar(chapters: dict) -> dict:
             st.rerun()
         if c3.button("Reload", use_container_width=True,
                      help="Re-read the chapter files from disk"):
-            load_chapters.clear()
+            vocab.clear_chapter_cache()
             st.rerun()
 
         files = st.multiselect("Chapters", names, key="files",
                                label_visibility="collapsed")
         for name in files:
+            if name not in chapters:
+                continue
             by_pos: dict[str, int] = {}
-            for e in chapters.get(name, []):
+            for e in chapters[name]:
                 by_pos[e.pos] = by_pos.get(e.pos, 0) + 1
             breakdown = ", ".join(f"{n} {pos}{'' if n == 1 else 's'}"
                                   for pos, n in by_pos.items())
@@ -202,17 +194,18 @@ def sidebar(chapters: dict) -> dict:
 # setup view
 # ---------------------------------------------------------------------------
 
-def setup_view(chapters: dict, opts: dict) -> None:
+def setup_view(paths, chapters: dict, opts: dict, deferred: bool) -> None:
     st.title("Latin Vocab Quiz")
     st.caption("Drawn from the chapter notes in this vault.")
 
-    pool = pool_for(chapters, opts["files"])
-    total = len(pool)
-    if not total:
+    total = sum(len(entries) for name, entries in chapters.items() if name in opts["files"])
+    if not total and not deferred:
         st.info("Pick at least one chapter in the sidebar.")
         return
 
-    if opts["exhaustive"]:
+    if deferred:
+        st.caption("Reading vocabulary is counted when you start a quiz or build a sheet.")
+    elif opts["exhaustive"]:
         st.write(f"All **{total}** word{'' if total == 1 else 's'} will be asked.")
     elif opts["count"] > total:
         st.write(f"**{total}** words available — {opts['count']} questions "
@@ -221,6 +214,10 @@ def setup_view(chapters: dict, opts: dict) -> None:
         st.write(f"**{total}** words available.")
 
     if st.button("Start quiz", type="primary"):
+        pool = load_pool(paths, opts["files"])
+        if not pool:
+            st.info("No vocabulary found in the selected files.")
+            return
         questions = vocab.build_quiz(
             pool, opts["count"], opts["mode"], opts["parsing"],
             random.Random(), opts["exhaustive"], opts["shuffle"])
@@ -230,10 +227,10 @@ def setup_view(chapters: dict, opts: dict) -> None:
                    opts["files"], opts["mode"], opts["parsing"], opts)
         st.rerun()
 
-    printable_section(pool, opts)
+    printable_section(paths, opts)
 
 
-def printable_section(pool: list[vocab.Entry], opts: dict) -> None:
+def printable_section(paths, opts: dict) -> None:
     with st.expander("Printable sheet"):
         st.caption("Chapters, mode, count, exhaustive, shuffle and parsing "
                    "come from the sidebar. Download the sheet, then print it "
@@ -245,6 +242,10 @@ def printable_section(pool: list[vocab.Entry], opts: dict) -> None:
                                index=1)
 
         if st.button("Build sheet"):
+            pool = load_pool(paths, opts["files"])
+            if not pool:
+                st.info("No vocabulary found in the selected files.")
+                return
             questions = vocab.build_quiz(
                 pool, opts["count"], opts["mode"], opts["parsing"],
                 random.Random(), opts["exhaustive"], opts["shuffle"])
@@ -369,7 +370,7 @@ def result_html(r: dict) -> str:
     )
 
 
-def results_view(chapters: dict) -> None:
+def results_view() -> None:
     graded = st.session_state.results
     s = graded["score"]
     st.title("Results")
@@ -437,23 +438,25 @@ def main() -> None:
     if not VAULT.is_dir():
         st.warning(f"No chapter folder at {VAULT}. Upload a record or set $LATIN_VAULT.")
 
-    chapters = load_chapters(vault_stamp(), str(VAULT))
-    if not chapters:
+    paths = vocab.chapter_paths(VAULT)
+    chapters = vocab.load_chapters(VAULT, paths, [name for name in paths if not vocab.is_reading_chapter(name)])
+    if not paths:
         st.warning(f"No chapter markdown files found in {VAULT}. You can still upload a test record.")
 
-    opts = sidebar(chapters)
+    opts = sidebar(paths, chapters)
+    deferred = any(name in paths and name not in chapters for name in opts["files"])
     vocabulary, morphology = st.tabs(["Vocabulary", "Declension & conjugation"],
-                                     default=st.session_state.get("_practice_tab", "Vocabulary"))
+                                     key="_practice_tab", on_change="rerun")
     with vocabulary:
         view = st.session_state.view
         if view == "quiz" and st.session_state.quiz:
             quiz_view()
         elif view == "results" and st.session_state.results:
-            results_view(chapters)
+            results_view()
         else:
-            setup_view(chapters, opts)
+            setup_view(paths, chapters, opts, deferred)
     with morphology:
-        morphology_tab(chapters, opts, VAULT)
+        morphology_tab(paths, opts, VAULT, preview=morphology.open or not deferred)
 
 
 main()

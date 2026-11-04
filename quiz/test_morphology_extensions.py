@@ -10,7 +10,9 @@ import unittest
 from unittest.mock import patch
 
 import morphology as m
+from morphology_cache import empty_cache, save_json
 from morphology_data import LexiconError
+from morphology_store import compile_store
 import server
 import vocab
 
@@ -178,6 +180,10 @@ class ExtensibleAnswerKeys(unittest.TestCase):
             self.lexicon()
 
     def test_live_http_reload_and_original_quiz_key(self):
+        # This fixture tests local rule overrides, independently of the bundled imports.
+        cache = self.vault / "morphology_cache.json"
+        save_json(cache, empty_cache())
+        compile_store(cache)
         (self.vault / "ch10.md").write_text("**NOUNS**\nignis, ignis, m. - fire\n", encoding="utf-8")
         httpd = server.Server(("127.0.0.1", 0), server.Handler)
         thread = threading.Thread(target=httpd.serve_forever, daemon=True)

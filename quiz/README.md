@@ -11,14 +11,37 @@ two front ends over the same engines (`vocab.py` for vocabulary and
 
 ## Running the Streamlit app
 
+Local development uses **uv's pip interface** with the root `requirements.txt`
+and Python 3.13 (selected by `.python-version`). The project environment lives
+in **`.venv/` at the vault root** and is excluded from Git.
+
+From the vault root in PowerShell, create or refresh it with:
+
+```powershell
+.\setup_env.ps1
+.\.venv\Scripts\python.exe -m streamlit run quiz/streamlit_app.py
 ```
-pip install -r requirements.txt
-streamlit run quiz/streamlit_app.py
+
+The setup script finds uv on PATH or in its usual per-user Windows install
+folders. Add `-WithImporter` when you also need the optional certificate-trust
+dependency for `update_cache.bat`. To activate the environment for other
+commands, run `.\.venv\Scripts\Activate.ps1`; use `python -m streamlit` to
+launch the app with that interpreter.
+
+With uv already on PATH, the equivalent manual setup is:
+
+```powershell
+uv venv --allow-existing
+uv pip install -r requirements.txt
+uv pip check
 ```
 
 It opens <http://localhost:8501>. Chapters come from the folder above `quiz/`,
-or from `$LATIN_VAULT` if that is set. Editing a chapter is picked up
-automatically; **Reload** in the sidebar forces a re-read.
+or from `$LATIN_VAULT` if that is set. The chapter picker lists file names.
+Regular chapters are parsed on load, and selected `reading` chapters are parsed
+on demand when a quiz, sheet, or morphology preview needs them. Parsed entries
+are cached per file. Edits invalidate that file's cached entries, and **Reload**
+in the sidebar clears the chapter cache.
 
 Both **Vocabulary** and **Declension & conjugation** tabs are available in
 Streamlit. They share the sidebar's chapter selection, question count,
@@ -83,8 +106,8 @@ It prints a URL (default <http://localhost:8765>) and opens the browser for you.
 Stop it with Ctrl+C. Nothing leaves the machine — the server binds to
 `127.0.0.1` only.
 
-Chapter files are re-read on every request, so after editing a chapter just
-click **reload files** (or start a new quiz). No restart needed.
+The file list preloads regular chapters and defers reading vocabulary until
+needed. Edited chapters are parsed again on their next use.
 
 ## Chapter file format
 

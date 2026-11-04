@@ -38,12 +38,14 @@ function selectedFiles() {
 
 function updatePool() {
   const chosen = new Set(selectedFiles());
-  const total = files.filter((f) => chosen.has(f.name))
-                     .reduce((s, f) => s + f.count, 0);
+  const selected = files.filter((f) => chosen.has(f.name));
+  const total = selected.reduce((s, f) => s + (f.count ?? 0), 0);
   const count = parseInt($('#count').value, 10) || 0;
   const exhaustive = $('#exhaustive').checked;
   let msg;
-  if (!total) {
+  if (selected.some((f) => f.count === null)) {
+    msg = 'Reading vocabulary is counted when you start a quiz or build a sheet.';
+  } else if (!total) {
     msg = 'No chapters selected.';
   } else if (exhaustive) {
     msg = `All ${total} word${total === 1 ? '' : 's'} will be asked.`;
@@ -77,7 +79,7 @@ function renderFiles() {
       .join(', ');
 
     label.append(cb, el('span', 'fname', f.name),
-                 el('span', 'fmeta', breakdown || `${f.count} entries`));
+                 el('span', 'fmeta', f.count === null ? 'Reading vocabulary' : (breakdown || `${f.count} entries`)));
     box.append(label);
   }
   updatePool();

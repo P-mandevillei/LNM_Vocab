@@ -19,6 +19,17 @@ python quiz/import_morphology.py --compare
 python quiz/import_morphology.py --offline --check
 ```
 
+`data/morphology_cache.sqlite3` holds the acquisition history and the published
+quiz tables. Include it when deploying. To publish the saved checkpoints
+without acquiring or reparsing any tables, run:
+
+```powershell
+python quiz/import_morphology.py --compile-only
+```
+
+For a legacy JSON cache, pass its path as `--cache` with `--compile-only`
+to create the corresponding SQLite file.
+
 If using the local virtual environment, replace `python` with
 `.\.venv\Scripts\python.exe`. The import-only dependency uses the operating
 system's trusted certificate store. HTTPS certificate verification stays on.
@@ -38,9 +49,11 @@ bytes or modification time.
 
 ## Files and saved state
 
-- `data/morphology_cache.json`: versioned acquisition records, grammatical
-  identity, full parsed feature-keyed cells, chapter bindings, restrictions,
-  review status and skipped entries.
+- `data/morphology_cache.sqlite3`: acquisition records, review status, chapter
+  bindings, and the published catalog and compressed answer forms.
+  Both quiz front ends read the catalog to check eligibility and fetch forms
+  by record ID after selection. They can fall back to JSON for an older or
+  custom cache. A custom cache can be compiled with `--compile-only --cache PATH`.
 - `data/collatinus_raw/`: content-addressed source responses for independent
   inspection and reparsing without another request.
 - `data/morphology_comparison.json`: every overlap, variant difference,
@@ -61,14 +74,15 @@ characters on older Windows encodings; cache and report files retain Unicode.
 
 Atomic replacement and a single-writer lock protect the cache. Successful
 acquisitions are checkpointed after each word, so interrupted imports resume.
-Windows sync/indexing file locks receive bounded retries. Failed refreshes
+The app keeps using the published catalog and forms while an update checkpoints
+new acquisitions. Windows sync/indexing file locks receive bounded retries. Failed refreshes
 retain the old table. A changed refresh of an approved table remains under
 `pending_refresh` until explicitly approved.
 
 Commit the chapters, cache and source responses together for deployment. The
 Streamlit app and plain server only read them; they never fetch tables while
 creating, grading or retesting a quiz. Custom vaults can use a cache named
-`morphology_cache.json` inside the vault.
+`morphology_cache.sqlite3` inside the vault.
 
 ## Inspect, retry and refresh
 
@@ -90,7 +104,7 @@ python quiz/import_morphology.py --offline --reparse --compare
 python quiz/import_morphology.py --offline --reparse --refresh capio --compare
 
 # Alternate chapter folder/cache artifact.
-python quiz/import_morphology.py --vault PATH --cache PATH/morphology_cache.json --compare
+python quiz/import_morphology.py --vault PATH --cache PATH/morphology_cache.sqlite3 --compare
 ```
 
 `--check` is an offline acquisition-completeness check. It fails for missing,

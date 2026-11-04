@@ -28,6 +28,7 @@ import re
 import unicodedata
 from collections.abc import Iterable
 from dataclasses import dataclass, field
+from functools import lru_cache
 from os import walk
 from pathlib import Path
 
@@ -255,11 +256,35 @@ def find_markdown_files(vault: Path) -> list[Path]:
     return sorted(out)
 
 
-def load_vault(vault: Path) -> dict[str, list[Entry]]:
-    return {
-        p.relative_to(vault).as_posix(): parse_file(p, vault)
-        for p in find_markdown_files(vault)
-    }
+def chapter_paths(vault: Path) -> dict[str, Path]:
+    return {path.relative_to(vault).as_posix(): path for path in find_markdown_files(vault)}
+
+
+def is_reading_chapter(name: str) -> bool:
+    return "reading" in Path(name).name.casefold()
+
+
+@lru_cache(maxsize=256)
+def _chapter_entries(path: Path, vault: Path, modified: int, size: int) -> tuple[Entry, ...]:
+    return tuple(parse_file(path, vault))
+
+
+def load_chapter(path: Path, vault: Path) -> list[Entry]:
+    stat = path.stat()
+    return list(_chapter_entries(path, vault, stat.st_mtime_ns, stat.st_size))
+
+
+def clear_chapter_cache():
+    _chapter_entries.cache_clear()
+
+
+def load_chapters(vault: Path, paths: dict[str, Path], files=None) -> dict[str, list[Entry]]:
+    selected = set(files) if files is not None else paths
+    return {name: load_chapter(path, vault) for name, path in paths.items() if name in selected}
+
+
+def load_vault(vault: Path, files=None) -> dict[str, list[Entry]]:
+    return load_chapters(vault, chapter_paths(vault), files)
 
 
 # --------------------------------------------------------------------------

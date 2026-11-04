@@ -13,6 +13,7 @@ import morphology as m
 import quiz_record
 import streamlit_records as records
 import streamlit_accounts as accounts
+import vocab
 
 
 KIND_LABELS = {
@@ -117,7 +118,11 @@ def setup_view(chapters, req, vault):
     if not total:
         st.info("No supported entries match these settings. Pairs need both nouns and adjectives.")
     if st.button("Start morphology quiz", key="morph_start", type="primary", disabled=not total):
-        data = m.build_quiz(pool, opts, lexicon=lexicon, sources=sources)
+        try:
+            data = m.build_quiz(pool, opts, lexicon=lexicon, sources=sources)
+        except ValueError as exc:
+            st.error(str(exc))
+            return
         begin_quiz(data["questions"], {"files": req["files"], **opts})
         st.rerun()
 
@@ -264,7 +269,7 @@ def results_view():
     records.results_groups(graded["results"], render_result)
 
 
-def render(chapters: dict, shared: dict, vault: Path):
+def render(paths: dict, shared: dict, vault: Path, *, preview: bool):
     init_state()
     st.markdown(CSS, unsafe_allow_html=True)
     st.title("Declension & conjugation")
@@ -273,5 +278,6 @@ def render(chapters: dict, shared: dict, vault: Path):
         quiz_view()
     elif st.session_state.morph_view == "results" and st.session_state.morph_results:
         results_view()
-    else:
+    elif preview:
+        chapters = vocab.load_chapters(vault, paths, req["files"])
         setup_view(chapters, req, vault)

@@ -124,7 +124,11 @@ class Handler(BaseHTTPRequestHandler):
 
     def _file_list(self):
         out = []
-        for name, entries in vocab.load_vault(VAULT).items():
+        for name, path in vocab.chapter_paths(VAULT).items():
+            if vocab.is_reading_chapter(name):
+                out.append({"name": name, "count": None, "by_pos": {}})
+                continue
+            entries = vocab.load_chapter(path, VAULT)
             by_pos: dict[str, int] = {}
             for e in entries:
                 by_pos[e.pos] = by_pos.get(e.pos, 0) + 1
@@ -139,9 +143,7 @@ class Handler(BaseHTTPRequestHandler):
         if mode not in ("la_to_en", "en_to_la", "mixed"):
             mode = "mixed"
         include_parsing = bool(req.get("parsing", True))
-        vault = vocab.load_vault(VAULT)
-        pool = [e for name, entries in vault.items() if name in wanted
-                for e in entries]
+        pool = [e for entries in vocab.load_vault(VAULT, wanted).values() for e in entries]
         return pool, count, mode, include_parsing
 
     def _remember(self, questions, files, mode, include_parsing,
@@ -307,13 +309,15 @@ class Handler(BaseHTTPRequestHandler):
         except (ValueError, TypeError) as exc:
             return self._json({"error": str(exc)}, 400)
         wanted = req.get("files") or []
-        pool = [e for name, entries in vocab.load_vault(VAULT).items()
-                if name in wanted for e in entries]
+        pool = [e for entries in vocab.load_vault(VAULT, wanted).values() for e in entries]
         if preview:
             available, excluded, counts = morphology.candidates(pool, opts, lexicon=lexicon, sources=sources)
             return self._json({"pool": len(available), "counts": counts,
                                "excluded": excluded})
-        data = morphology.build_quiz(pool, opts, lexicon=lexicon, sources=sources)
+        try:
+            data = morphology.build_quiz(pool, opts, lexicon=lexicon, sources=sources)
+        except ValueError as exc:
+            return self._json({"error": str(exc)}, 400)
         questions = data.pop("questions")
         if not questions:
             return self._json({"error": "No supported entries match these settings. "

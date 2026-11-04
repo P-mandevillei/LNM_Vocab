@@ -13,7 +13,7 @@ from urllib.error import URLError
 import collatinus as p
 import import_morphology as importer
 import morphology as m
-from morphology_cache import CacheError, cache_lock, legacy_record, load_cache, lookup, save_json
+from morphology_cache import CacheError, cache_lock, legacy_record, load_cache, lookup, save_json, table_sources
 import morphology_cache
 import vocab
 
@@ -210,6 +210,28 @@ class IncrementalImport(unittest.TestCase):
         self.chapter("**VERBS**\ncapio, capere, cepi, captum - a changed English gloss\n", "ch11.md")
         self.assertEqual(self.run_import(client)["calls"], 0)
         self.assertEqual(self.cache.read_bytes(), original)
+
+    def test_sqlite_import_checkpoints_and_publishes_without_json(self):
+        self.cache = self.vault / "morphology_cache.sqlite3"
+        self.chapter("**NOUNS**\nrosa, rosae, f. - rose\n")
+        client = FakeClient()
+        with patch.object(p, "CollatinusClient", return_value=client):
+            status, output = self.run_cli()
+        self.assertEqual(status, 0, output)
+        self.assertEqual(client.calls, ["rosa"])
+        self.assertEqual(len(table_sources(self.vault).records), 1)
+
+        self.chapter("**NOUNS**\nrosa, rosae, f. - rose\nporta, portae, f. - gate\n")
+        self.run_import(client)
+        self.assertEqual(client.calls, ["rosa", "porta"])
+        self.assertEqual(len(load_cache(self.cache)["entries"]), 2)
+        self.assertEqual(len(table_sources(self.vault).records), 1)
+
+        with patch.object(p, "CollatinusClient", side_effect=AssertionError("unexpected network acquisition")):
+            status, output = self.run_cli("--offline", "--check")
+        self.assertEqual(status, 0, output)
+        self.assertEqual(len(table_sources(self.vault).records), 2)
+        self.assertFalse(self.cache.with_suffix(".json").exists())
 
     def test_ten_new_lemmas_only_make_ten_requests_and_duplicates_reuse(self):
         self.chapter("**NOUNS**\nrosa, rosae, f. - rose\n")

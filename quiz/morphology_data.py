@@ -213,8 +213,8 @@ def load_lexicon(vault: Path | None = None, *, include_custom=True, include_cach
     locations = {}
     cache_only = set()
     if include_cache:
-        from morphology_cache import DEFAULT_CACHE, approved_legacy_records
-        cache_path = (vault / "morphology_cache.json") if vault and (vault / "morphology_cache.json").exists() else DEFAULT_CACHE
+        from morphology_cache import approved_legacy_records, cache_path_for
+        cache_path = cache_path_for(vault)
         for category, additions in approved_legacy_records(cache_path).items():
             for key, record in additions.items():
                 records[category][key] = record

@@ -69,7 +69,7 @@ Streamlit script, app startup, quiz creation or grading.
    original answer snapshots for exact retesting.
 
 The recommended authoritative artifact is
-`quiz/data/morphology_cache.json`, containing tables and their acquisition
+`quiz/data/morphology_cache.sqlite3`, containing tables and their acquisition
 state. Keep personal reviewed overrides in the existing root
 `morphology.json`. Deterministic ordering makes new entries easy to review.
 

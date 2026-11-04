@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from copy import deepcopy
+from dataclasses import dataclass
 from functools import lru_cache
 import json
 import hashlib
@@ -18,7 +19,7 @@ import time
 
 
 SCHEMA_VERSION = 1
-DEFAULT_CACHE = Path(__file__).resolve().parent / "data" / "morphology_cache.json"
+DEFAULT_CACHE = Path(__file__).resolve().parent / "data" / "morphology_cache.sqlite3"
 STATUSES = {"ready", "ambiguous", "not_found", "error"}
 
 
@@ -34,8 +35,19 @@ def load_cache(path=DEFAULT_CACHE):
     path = Path(path)
     if not path.exists():
         return empty_cache()
+    if path.suffix == ".sqlite3":
+        from morphology_store import read_acquisition
+        return decode_cache(read_acquisition(path), path)
     try:
-        data = json.loads(path.read_text(encoding="utf-8-sig"))
+        content = path.read_bytes()
+    except OSError as exc:
+        raise CacheError(f"{path}: {exc}") from exc
+    return decode_cache(content, path)
+
+
+def decode_cache(content, path):
+    try:
+        data = json.loads(content.decode("utf-8-sig"))
     except (OSError, ValueError) as exc:
         raise CacheError(f"{path}: {exc}") from exc
     if not isinstance(data, dict) or type(data.get("schema_version")) is not int or data.get("schema_version") != SCHEMA_VERSION:
@@ -66,7 +78,7 @@ def load_cache(path=DEFAULT_CACHE):
 def save_json(path, data):
     """Do not touch a byte-identical file; atomically replace a changed one."""
     path = Path(path)
-    content = (json.dumps(data, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode("utf-8")
+    content = encode_cache(data)
     if path.exists() and path.read_bytes() == content:
         return False
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -77,19 +89,35 @@ def save_json(path, data):
             stream.write(content)
             stream.flush()
             os.fsync(stream.fileno())
-        for attempt in range(9):
-            try:
-                os.replace(temporary, path)
-                break
-            except PermissionError:
-                if attempt == 8:
-                    raise
-                # Windows sync/indexing tools may briefly hold the old file.
-                time.sleep(min(0.05 * 2 ** attempt, 0.5))
+        replace_cache_file(temporary, path)
     finally:
         if temporary is not None:
             temporary.unlink(missing_ok=True)
     return True
+
+
+def encode_cache(data):
+    return (json.dumps(data, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode("utf-8")
+
+
+def save_cache(path, data):
+    path = Path(path)
+    if path.suffix == ".sqlite3":
+        from morphology_store import write_acquisition
+        return write_acquisition(path, encode_cache(data))
+    return save_json(path, data)
+
+
+def replace_cache_file(temporary, path):
+    for attempt in range(9):
+        try:
+            os.replace(temporary, path)
+            return
+        except PermissionError:
+            if attempt == 8:
+                raise
+            # Windows sync/indexing tools may briefly hold the old file.
+            time.sleep(min(0.05 * 2 ** attempt, 0.5))
 
 
 @contextmanager
@@ -113,46 +141,110 @@ def lookup(candidate, **features):
     return candidate.get("cells", {}).get(key)
 
 
-class TableSources:
-    """Read ready imports independently of the approved legacy projection.
+@dataclass(frozen=True)
+class TableEntry:
+    record_id: str
+    request: dict
+    configurations: frozenset[tuple[str, str, str]]
+    passive_forms: bool
 
-    Quiz policy permits imported alternatives, including unreviewed imports.
-    Bindings retain grammatical identity; a word's gloss/chapter is immaterial.
-    """
 
-    def __init__(self, data):
-        self.data = data
+def summarize_record(record_id, record):
+    request = record["request"]
+    if request["pos"] != "verb":
+        return TableEntry(record_id, request, frozenset(), False)
+    from morphology_data import NUMBERS
+
+    candidate = record["candidate"]
+    choices = set()
+    passive_forms = False
+    for cell in candidate["cells"].values():
+        features = cell["features"]
+        if features.get("voice") == "passive" and features.get("mood") and cell["forms"]:
+            passive_forms = True
+        if features.get("pos") == "verb" and all(features.get(k) for k in ("voice", "tense", "mood")):
+            choices.add(tuple(features[k] for k in ("voice", "tense", "mood")))
+    configurations = set()
+    for voice, tense, mood in choices:
+        cells = [lookup(candidate, pos="verb", voice=voice, tense=tense, mood=mood,
+                        person=person, number=number)
+                 for number in NUMBERS for person in range(1, 4)]
+        if any(cell and cell["forms"] for cell in cells) and (
+            mood == "imperative" or all(cell is not None for cell in cells)
+        ):
+            configurations.add((voice, tense, mood))
+    return TableEntry(record_id, request, frozenset(configurations), passive_forms)
+
+
+class TableCatalog:
+    """Match ready records by chapter binding or unique dictionary identity."""
+
+    def __init__(self, records, bindings):
+        self.records = records
+        self.bindings = bindings
         self.by_dictionary = {}
         from vocab import normalize
-        for record in data["entries"].values():
-            if record["status"] == "ready":
-                req = record["request"]
-                key = (req["pos"], tuple(normalize(f) for f in req["forms"]))
-                self.by_dictionary.setdefault(key, []).append(record)
+        for record in records.values():
+            req = record.request
+            key = (req["pos"], tuple(normalize(f) for f in req["forms"]))
+            self.by_dictionary.setdefault(key, []).append(record)
 
     def record_for(self, entry, model=None):
         raw = {"pos": entry.pos, "forms": entry.latin_forms,
                "gender": entry.gender, "number": entry.number}
         key = hashlib.sha256(json.dumps(raw, ensure_ascii=False, sort_keys=True,
                             separators=(",", ":")).encode()).hexdigest()
-        binding = self.data["bindings"].get(key)
-        if binding:
-            record = self.data["entries"][binding["entry"]]
-            return record if record["status"] == "ready" else None
+        if key in self.bindings:
+            # An explicit binding to a non-ready record blocks dictionary fallback.
+            return self.records.get(self.bindings[key])
         from vocab import normalize
         forms = ([model.head, model.infinitive] if entry.pos == "verb" else model.forms) if model else entry.latin_forms
         records = self.by_dictionary.get((entry.pos, tuple(normalize(f) for f in forms)), [])
         return records[0] if len(records) == 1 else None
 
 
+class TableSources(TableCatalog):
+    """In-memory reader for legacy JSON caches and import fixtures."""
+
+    def __init__(self, data):
+        self.payloads = data["entries"]
+        records = {key: summarize_record(key, record) for key, record in self.payloads.items()
+                   if record["status"] == "ready"}
+        super().__init__(records, {key: binding["entry"] for key, binding in data["bindings"].items()})
+
+    def load_records(self, record_ids):
+        return {key: self.payloads[key] for key in record_ids}
+
+
+def cache_path_for(vault=None):
+    if vault is not None:
+        for filename in ("morphology_cache.json", "morphology_cache.sqlite3"):
+            local = Path(vault) / filename
+            if local.exists():
+                return local
+    return DEFAULT_CACHE
+
+
 def table_sources(vault=None, path=None):
     """Mtime-keyed read-only cache; chapter updates need no service restart."""
-    local = Path(vault) / "morphology_cache.json" if vault else None
-    path = Path(path) if path else local if local and local.exists() else DEFAULT_CACHE
-    if not path.exists():
+    source = Path(path) if path is not None else cache_path_for(vault)
+    if path is None or source.suffix == ".sqlite3":
+        database = source.with_suffix(".sqlite3")
+        if database.exists():
+            from morphology_store import sqlite_sources
+            try:
+                legacy = source if source.suffix == ".json" else None
+                sources = sqlite_sources(database, legacy)
+            except (CacheError, OSError):
+                if source.suffix == ".sqlite3" or not source.exists():
+                    raise
+            else:
+                if sources is not None:
+                    return sources
+    if not source.exists():
         return TableSources(empty_cache())
-    stat = path.stat()
-    return _table_sources(str(path.resolve()), stat.st_mtime_ns, stat.st_size)
+    stat = source.stat()
+    return _table_sources(str(source.resolve()), stat.st_mtime_ns, stat.st_size)
 
 
 @lru_cache(maxsize=8)

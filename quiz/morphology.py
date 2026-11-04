@@ -16,7 +16,7 @@ import random
 
 import vocab
 import morphology_answers as answers
-from morphology_cache import table_sources, lookup
+from morphology_cache import table_sources
 from morphology_data import (CASES, NUMBERS, GENDERS, Lexicon, Nominal, Verb,
                              load_lexicon)
 
@@ -290,18 +290,16 @@ def candidates(pool: list[vocab.Entry], opts: dict,
                 model = {"noun": noun_model, "adjective": adjective_model, "verb": verb_model}[entry.pos](entry, lexicon)
             except Unavailable:
                 record = sources.record_for(entry)
-                if not record or (entry.pos == "noun" and not record["request"].get("genders")):
+                if not record or (entry.pos == "noun" and not record.request.get("genders")):
                     raise
-                req = record["request"]
+                req = record.request
                 if entry.pos == "verb":
                     head = vocab.normalize(entry.headword)
                     reviewed = lexicon.verbs.get(lexicon.verb_aliases.get(head, head))
                     # Preserve explicit restrictions for known chapter senses.
                     # The importer's default False for an unclassified word
                     # is not evidence that its cached passive is impossible.
-                    passive = reviewed.passive if reviewed else any(
-                        c["features"].get("voice") == "passive" and c["features"].get("mood") and c["forms"]
-                        for c in record["candidate"]["cells"].values())
+                    passive = reviewed.passive if reviewed else record.passive_forms
                     model = Verb(req["forms"][0], req["forms"][1] if len(req["forms"]) > 1 else "",
                                  "cached", passive=bool(passive), quantities_known=False)
                 else:
@@ -349,11 +347,7 @@ def verb_configurations(model, record, opts):
         if voice == "passive" and not model.passive:
             continue
         rules, _ = rule_conjugation(model, voice, tense, mood)
-        cells = [lookup(record["candidate"], pos="verb", voice=voice, tense=tense,
-                        mood=mood, person=person, number=number) if record else None
-                 for number in NUMBERS for person in range(1, 4)]
-        if rules or (any(c and c["forms"] for c in cells) and
-                     (mood == "imperative" or all(c is not None for c in cells))):
+        if rules or (record and (voice, tense, mood) in record.configurations):
             configurations.append((voice, tense, mood))
     return configurations
 
@@ -426,14 +420,35 @@ def question(candidate: dict, index: int, opts: dict, rng: random.Random) -> dic
     return q
 
 
+def hydrate_candidates(chosen, sources):
+    """Load imported forms once for the selected words, including both sides of a pair."""
+    fields = ("record", "adjective_record")
+    record_ids = {entry.record_id for candidate in chosen for field in fields
+                  if (entry := candidate.get(field)) is not None}
+    if not record_ids:
+        return chosen
+    records = sources.load_records(record_ids)
+    hydrated = []
+    for candidate in chosen:
+        question_data = candidate.copy()
+        for field in fields:
+            entry = candidate.get(field)
+            if entry is not None:
+                question_data[field] = records[entry.record_id]
+        hydrated.append(question_data)
+    return hydrated
+
+
 def build_quiz(pool: list[vocab.Entry], opts: dict, rng: random.Random | None = None,
                lexicon: Lexicon | None = None, sources=None) -> dict:
     rng = rng or random.Random()
+    sources = sources if sources is not None else table_sources()
     available, excluded, counts = candidates(pool, opts, rng, lexicon, sources)
     chosen = vocab.select_entries(available, opts["count"], opts["exhaustive"], opts["shuffle"], rng)
     if not opts["shuffle"]:
         order = {id(c): i for i, c in enumerate(available)}
         chosen.sort(key=lambda c: order[id(c)])
+    chosen = hydrate_candidates(chosen, sources)
     return {"questions": [question(c, i, opts, rng) for i, c in enumerate(chosen)],
             "pool": len(available), "counts": counts, "excluded": excluded,
             "exhaustive": opts["exhaustive"]}

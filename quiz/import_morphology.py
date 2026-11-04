@@ -19,7 +19,8 @@ from urllib.error import HTTPError, URLError
 
 import collatinus as provider
 import morphology as m
-from morphology_cache import DEFAULT_CACHE, CacheError, cache_lock, load_cache, lookup, save_json
+from morphology_cache import DEFAULT_CACHE, CacheError, cache_lock, load_cache, lookup, save_cache, save_json
+from morphology_store import compile_store
 import vocab
 
 
@@ -230,11 +231,11 @@ def import_tables(vault, cache_path=DEFAULT_CACHE, *, client=None, dry_run=False
         data["entries"][key] = record
         # Only attach bindings whose requests have a saved acquisition record.
         data["bindings"].update({k: b for k, b in bindings.items() if b["entry"] in data["entries"]})
-        save_json(cache_path, data)
+        save_cache(cache_path, data)
         progress(f"{index + 1}/{len(requests)} {request['pos']} {request['query']}: {record['status']}")
     if not dry_run:
         data["bindings"].update({k: b for k, b in bindings.items() if b["entry"] in data["entries"]})
-        save_json(cache_path, data)
+        save_cache(cache_path, data)
     return dict(stats)
 
 
@@ -365,6 +366,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--vault", type=Path, default=HERE.parent)
     parser.add_argument("--cache", type=Path, default=DEFAULT_CACHE)
+    parser.add_argument("--compile-only", action="store_true", help="Publish the SQLite quiz tables from saved acquisition data")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--offline", action="store_true")
     parser.add_argument("--retry-errors", action="store_true")
@@ -376,7 +378,11 @@ def main():
     parser.add_argument("--check", action="store_true", help="Offline acquisition completeness check (does not grant linguistic approval)")
     parser.add_argument("--approve", action="append", default=[], metavar="CACHE_KEY", help="Explicitly approve a reviewed record for offline fallback")
     args = parser.parse_args()
-    with cache_lock(args.cache):
+    with cache_lock(args.cache.with_suffix(".sqlite3")):
+        if args.compile_only:
+            if not args.dry_run:
+                console_print(f"SQLite quiz snapshot: {compile_store(args.cache)}")
+            return 0
         stats = import_tables(args.vault, args.cache, dry_run=args.dry_run, offline=args.offline or bool(args.approve) or args.check,
                               retry_errors=args.retry_errors, retry_missing=args.retry_missing, refresh=args.refresh,
                               limit=args.limit, reparse=args.reparse, progress=console_print)
@@ -385,7 +391,9 @@ def main():
             for key in args.approve:
                 approve_entry(data, key)
             if not args.dry_run:
-                save_json(args.cache, data)
+                save_cache(args.cache, data)
+        if not args.dry_run:
+            console_print(f"SQLite quiz snapshot: {compile_store(args.cache)}")
         console_print(json.dumps(stats, sort_keys=True))
         if args.compare:
             report = compare(args.vault, args.cache)
