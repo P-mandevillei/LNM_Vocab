@@ -44,6 +44,7 @@ def restore_pending(vault):
     else:
         for key in ("mode", "parsing"):
             st.session_state[key] = opts[key]
+        st.session_state.word_types = opts.get("word_types", [])
         st.session_state.update(quiz_files=opts["files"], quiz_mode=opts["mode"],
                                 quiz_parsing=opts["parsing"])
     title = "Recorded retest" if record["retest"] else "Recorded test"

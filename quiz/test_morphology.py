@@ -1,18 +1,14 @@
-"""Reference paradigms, sampling, grading/retesting and HTTP regressions.
+"""Reference paradigms, sampling, grading and retesting.
 
 Run: python -B -m unittest discover -s quiz -p 'test_*.py'
 """
 
 from copy import deepcopy
-from http.client import HTTPConnection
-import json
 from pathlib import Path
 import random
-import threading
 import unittest
 
 import morphology as m
-import server
 import vocab
 
 VAULT = Path(__file__).resolve().parent.parent
@@ -246,104 +242,6 @@ class QuestionsAndGrading(unittest.TestCase):
         # vowel quantities are a reliable source of corrections.
         unknown = vocab.Entry(["rosa", "rosae"], "rose", "noun", "test.md", 1, gender="f.")
         self.assertFalse(m.noun_model(unknown).quantities_known)
-
-
-class HTTPIntegration(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.httpd = server.Server(("127.0.0.1", 0), server.Handler)
-        cls.thread = threading.Thread(target=cls.httpd.serve_forever, daemon=True)
-        cls.thread.start()
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.httpd.shutdown()
-        cls.httpd.server_close()
-        cls.thread.join()
-
-    def request(self, path, payload=None, expected=200):
-        conn = HTTPConnection("127.0.0.1", self.httpd.server_port, timeout=10)
-        try:
-            conn.request("GET" if payload is None else "POST", path,
-                         body=None if payload is None else json.dumps(payload),
-                         headers={} if payload is None else {"Content-Type": "application/json"})
-            response = conn.getresponse()
-            body = response.read()
-            self.assertEqual(response.status, expected, body)
-            return json.loads(body) if response.getheader("Content-Type").startswith("application/json") else body
-        finally:
-            conn.close()
-
-    def test_new_tab_assets_and_metadata(self):
-        self.assertIn(b'/morphology.html', self.request('/'))
-        self.assertIn(b'/morphology.js', self.request('/morphology.html'))
-        self.assertIn(b'retest', self.request('/morphology.js'))
-        files = self.request('/api/morphology/files')["files"]
-        self.assertTrue({f"ch{i}.md" for i in range(1, 9)}.issubset({f['name'] for f in files}))
-
-    def test_quiz_key_secrecy_grading_and_retest(self):
-        data = self.request('/api/morphology/quiz', {"files": ["ch4.md"], "exhaustive": True})
-        def assert_no_answers(obj):
-            if isinstance(obj, dict):
-                for key, value in obj.items():
-                    self.assertNotIn(key, ("answer", "accepted", "strict", "identity", "meaning", "full_entry", "answer_sources", "disagreement"))
-                    assert_no_answers(value)
-            elif isinstance(obj, list):
-                for item in obj:
-                    assert_no_answers(item)
-        assert_no_answers(data)
-        qs = server.QUIZZES[data['id']]["questions"]
-        answers = full_answers(qs)
-        answers[0]["fields"][next(iter(answers[0]["fields"]))] = "wrong"
-        grade = self.request('/api/grade', {"id": data['id'], "answers": answers})
-        self.assertEqual(grade['score']['missed'], 1)
-        self.assertNotIn('missed', grade)
-        retest = self.request('/api/retest', {"id": data['id']})
-        self.assertEqual(len(retest["questions"]), 1)
-        self.assertEqual(retest["questions"][0], data["questions"][0])
-        qs = server.QUIZZES[retest['id']]["questions"]
-        grade = self.request('/api/grade', {"id": retest['id'], "answers": full_answers(qs)})
-        self.assertEqual(grade['score']['missed'], 0)
-        self.request('/api/retest', {"id": retest['id']}, expected=400)
-
-    def test_validation_empty_pool_and_expired_quiz(self):
-        self.request('/api/morphology/quiz', {"files": []}, expected=400)
-        self.request('/api/morphology/pool', {"kinds": []}, expected=400)
-        self.request('/api/morphology/pool', {"voice": "perfect"}, expected=400)
-        self.request('/api/morphology/quiz', {"files": ["ch1.md"], "kinds": ["pair"]}, expected=400)
-        self.request('/api/grade', {"id": "expired"}, expected=400)
-        data = self.request('/api/morphology/pool', {"files": ["ch4.md"], "kinds": ["noun"]})
-        self.assertEqual(data['pool'], 6)
-
-    def test_cached_tense_and_mood_api_and_answer_page_sources(self):
-        opts = {"files": ["ch10.md"], "kinds": ["verb"], "voices": ["active"],
-                "tenses": ["imperfect"], "moods": ["subjunctive"], "exhaustive": True}
-        data = self.request('/api/morphology/quiz', opts)
-        self.assertEqual(data["pool"], 7)
-        self.assertTrue(all(q["prompt_label"] == "Imperfect active subjunctive" for q in data["questions"]))
-        qs = server.QUIZZES[data["id"]]["questions"]
-        grade = self.request('/api/grade', {"id": data["id"], "answers": full_answers(qs)})
-        self.assertEqual(grade["score"]["missed"], 0)
-        self.assertTrue(all(set(q["fields"][0]["answer_sources"]) == {"importer"} for q in grade["results"]))
-        self.assertTrue(all(" – " in q["full_entry"] for q in grade["results"]))
-        self.request('/api/morphology/pool', {**opts, "moods": []}, expected=400)
-
-    def test_vocabulary_quiz_print_and_retest_still_work(self):
-        self.assertTrue({f"ch{i}.md" for i in range(1, 9)}.issubset(
-            {f['name'] for f in self.request('/api/files')["files"]}))
-        data = self.request('/api/quiz', {"files": ["ch1.md"], "count": 3, "mode": "la_to_en"})
-        qs = server.QUIZZES[data['id']]["questions"]
-        answers = [{"main": q["answer"], "fields": {f["key"]: f["answer"] for f in q["fields"]}} for q in qs]
-        answers[0]["main"] = "wrong"
-        grade = self.request('/api/grade', {"id": data['id'], "answers": answers})
-        self.assertEqual(grade['score']['main_correct'], 2)
-        self.assertEqual(grade['score']['missed'], 1)
-        retest = self.request('/api/retest', {"id": data['id']})
-        self.assertEqual(len(retest['questions']), 1)
-        self.assertEqual(retest['questions'][0]['prompt'], data['questions'][0]['prompt'])
-        sheet = self.request('/api/printable', {"files": ["ch1.md"], "count": 3})
-        self.assertEqual(len(sheet['questions']), 3)
-        self.assertIn('answer', sheet['questions'][0])
 
 
 if __name__ == '__main__':

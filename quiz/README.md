@@ -1,13 +1,7 @@
 # Latin vocab quiz
 
-Turns the chapter notes in this vault into random question sheets. There are
-two front ends over the same engines (`vocab.py` for vocabulary and
-`morphology.py` for declension/conjugation, question building and grading):
-
-| | run it with | good for |
-| --- | --- | --- |
-| **Streamlit** (`streamlit_app.py`) | `streamlit run quiz/streamlit_app.py` | deploying to the web; phones |
-| **Plain server** (`server.py`) | `python quiz/server.py` or `run.bat` | local use with no install at all |
+The Streamlit app turns the chapter notes in this vault into vocabulary quizzes,
+declension and conjugation drills, and printable worksheets.
 
 ## Running the Streamlit app
 
@@ -46,11 +40,10 @@ in the sidebar clears the chapter cache.
 Both **Vocabulary** and **Declension & conjugation** tabs are available in
 Streamlit. They share the sidebar's chapter selection, question count,
 Exhaustive and Shuffle order. The morphology tab has its own entry-type,
-verb-voice and adjective-gender selectors. Vocabulary Mode and Also test
+verb-voice and adjective-gender selectors. Word types, Mode and Also test
 parsing apply only to the vocabulary tab. Each tab keeps its own quiz, results
-and missed entries, so starting or retesting one does not replace the other.
-Morphology tables use the same chapter 10 definitions, live `morphology.json`
-overrides and original-answer retesting as the plain server.
+and missed entries. Morphology tables use the chapter 10 definitions and live
+`morphology.json` overrides.
 
 ## Accounts and saved history
 
@@ -92,22 +85,6 @@ the branch selected by the app. Rebooting the cloud app runs that deployed
 branch; it does not pick up unpushed local changes. Keep `quiz/streamlit_app.py`
 as the main file and include `quiz/streamlit_morphology.py`, the morphology
 engine/data files and chapter files in the same repository.
-
-## Running the plain server
-
-Double-click `run.bat`, or from a terminal:
-
-```
-python quiz/server.py
-```
-
-It prints a URL (default <http://localhost:8765>) and opens the browser for you.
-(`--port N` picks a port, `--vault PATH` reads chapters from somewhere else.)
-Stop it with Ctrl+C. Nothing leaves the machine — the server binds to
-`127.0.0.1` only.
-
-The file list preloads regular chapters and defers reading vocabulary until
-needed. Edited chapters are parsed again on their next use.
 
 ## Chapter file format
 
@@ -162,11 +139,14 @@ These notations are understood as well:
   either is accepted.
 - **Mixed** — each question picks a direction at random.
 
+Use **Word types** to draw from one or more categories, such as nouns and
+verbs. Leave the selection empty to include all types. **Other entries**
+includes words without a recognized part-of-speech heading.
+
 By default the quiz draws *Number of questions* words at random. Tick
-**Exhaustive** to be asked every word in the selected chapters instead, once
-each — the count is then ignored (and greyed out). **Shuffle order** off asks
-them in the order the chapters list them, which keeps parts of speech grouped.
-Both options apply to printable sheets too.
+**Exhaustive** to ask every word that matches the selected chapters and word
+types once, ignoring the count. Turn off **Shuffle order** to ask the words
+in chapter order. These settings also apply to printable sheets.
 
 For English → Latin the headword is the expected answer, but writing out the
 whole listing (`magnus, magna, magnum`, or `puella, puellae, f.`) is accepted
@@ -203,19 +183,15 @@ it is a guess about intent rather than something the format states.
 
 A worksheet of numbered prompts with ruled blanks to write on, the same parsing
 fields the quiz would ask, and an answer key on its own page. It uses the same
-chapters, mode, count, *Exhaustive*, *Shuffle order* and parsing settings as
+chapters, word types, mode, count, *Exhaustive*, *Shuffle order* and parsing settings as
 the quiz.
 
-In **Streamlit**, open *Printable sheet*, pick the answer key / columns /
+Open *Printable sheet*, pick the answer key / columns /
 spacing, press **Build sheet**, then **Download sheet**. Open the downloaded
 file and print it (or save as PDF) — the toolbar on the sheet still toggles the
 answer key, spacing and two-column layout, and its **Print** button is the one
 to use. The in-app *Preview* is only for looking; printing from it would print
 the whole Streamlit page.
-
-In the **plain server**, *Printable sheet…* opens the same worksheet in a new
-tab, where the toolbar additionally offers **New draw** for a fresh random
-sheet. That page's URL holds all of its settings, so it can be bookmarked.
 
 ## Grading
 
@@ -254,10 +230,8 @@ with blank answers, cleared unfamiliar marks and no previous result attached.
 Streamlit tells you which tab contains the restored test. Missing entries or
 invalid records leave the current test and controls unchanged.
 
-Streamlit still accepts older version 1 snapshots, including their embedded
-answer keys, even without their original chapters. The legacy plain server's
-version 1 export and restore behavior is unchanged; version 2 records are for
-Streamlit.
+Streamlit still accepts older version 1 snapshots with embedded answer keys,
+even without their original chapters.
 
 The current app requires Streamlit 1.65 or newer for account login and practice
 tab navigation. Downloading a record does not rerun the app and discard answers
@@ -292,25 +266,7 @@ the number of words) is retested once.
 The active session keeps the latest attempt for re-testing. A restarted server
 forgets its sessions; download a test record to preserve and replay an attempt.
 
-## Differences between the two front ends
-
-The questions, parsing, grading, retesting and worksheet content are identical.
-What differs is the shell around them:
-
-- **Keyboard.** The plain server moves to the next box on **Enter** and submits
-  on **Ctrl+Enter**. In Streamlit you tab between boxes.
-- **Printing.** The plain server opens the sheet in a tab; Streamlit downloads
-  it (see above).
-- **Settings memory.** The plain server remembers your chapters and options in
-  the browser between visits. Streamlit resets to the defaults each session.
-- **Install.** The plain server needs nothing but Python; Streamlit needs the
-  package installed.
-
-## Declension and conjugation tab (plain server)
-
-The **Declension & conjugation** tab is a separate page at `/morphology.html`.
-The vocabulary quiz, its settings, printing and retest interface keep their
-existing behavior. No extra package or network connection is needed.
+## Declension and conjugation tab
 
 Select chapters and any of four entry types:
 
@@ -428,7 +384,7 @@ available through Dickinson College Commentaries:
 - [The irregular present of dō](https://dcc.dickinson.edu/sites/default/files/d%C5%8D_d%C4%83re_pres.pdf)
 - [Impersonal passives](https://dcc.dickinson.edu/grammar/latin/impersonal-verbs)
 
-Run the reference-form, grading/retest, selection and HTTP regression tests:
+Run the reference-form, grading, retest and Streamlit regression tests:
 
 ```sh
 python -B -m unittest discover -s quiz -p 'test_*.py'
@@ -442,9 +398,9 @@ python -B -m unittest discover -s quiz -p 'test_*.py'
 - `morphology_lexicon.json` — bundled dictionary forms, classes and exceptions
 - `../morphology.json` — personal additions and answer-key overrides, reloaded live
 - `MORPHOLOGY.md` — guide to extending answer keys for future chapters
-- `test_morphology.py` — reference paradigms and HTTP regression tests
+- `test_morphology.py` — reference paradigms, question selection and grading
 - `test_morphology_extensions.py` — new classes, custom tables and live reload tests
-- `test_morphology_ch10.py` — every chapter 10 table, agreement and HTTP workflow
+- `test_morphology_ch10.py` — chapter 10 tables, agreement, grading and retests
 - `test_streamlit.py` — Streamlit tabs, forms, independent sessions, grading/retesting and reloads
 - `streamlit_app.py` — the Streamlit front end
 - `streamlit_morphology.py` — the Streamlit morphology tab over the shared engine
@@ -459,8 +415,5 @@ python -B -m unittest discover -s quiz -p 'test_*.py'
 - `test_records.py` — record replay, validation and re-test selection regressions
 - `test_reference_records.py` — compact record reconstruction, sparse results and size regressions
 - `sheet.py` — builds the downloadable worksheet as one self-contained file
-- `server.py` — the plain HTTP server and its JSON API
-- `static/` — the plain server's pages (`index.html`/`app.js`/`style.css`,
-  `print.html`/`print.js`/`print.css`)
 - `../requirements.txt`, `../.streamlit/config.toml` — deployment config, at
   the vault root because that is the repo root Streamlit Cloud reads

@@ -46,6 +46,9 @@ def configuration(kind, req):
         _require(req.get("mode") in MODES, "Invalid vocabulary mode in record.")
         _require(type(req.get("parsing")) is bool, "Invalid parsing setting in record.")
         opts = {key: req[key] for key in ("mode", "parsing", "count", "exhaustive", "shuffle")}
+        word_types = vocab.validate_word_types(req.get("word_types", []))
+        if word_types:
+            opts["word_types"] = word_types
     if "retest_selection" in req:
         _require(isinstance(req["retest_selection"], str) and req["retest_selection"] in RETEST_CHOICES,
                  "Invalid retest selection in record.")

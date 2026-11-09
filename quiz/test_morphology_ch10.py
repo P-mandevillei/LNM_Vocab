@@ -5,16 +5,11 @@ References: Dickinson College's Allen & Greenough adjective/i-stem paradigms,
 deus_decl_0.pdf and 3rd_conj_io_verbs_pres.pdf (see README.md).
 """
 
-from copy import deepcopy
-from http.client import HTTPConnection
-import json
 from pathlib import Path
 import random
-import threading
 import unittest
 
 import morphology as m
-import server
 import vocab
 
 
@@ -211,56 +206,6 @@ class Chapter10(unittest.TestCase):
             original = next(old for old in questions if old["identity"] == q["identity"])
             self.assertEqual(q["fields"], original["fields"])
         self.assertEqual(m.grade(retest, answers_for(retest))["score"]["missed"], 0)
-
-
-class Chapter10HTTP(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.httpd = server.Server(("127.0.0.1", 0), server.Handler)
-        cls.thread = threading.Thread(target=cls.httpd.serve_forever, daemon=True)
-        cls.thread.start()
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.httpd.shutdown()
-        cls.httpd.server_close()
-        cls.thread.join()
-
-    def request(self, path, payload=None):
-        conn = HTTPConnection("127.0.0.1", self.httpd.server_port, timeout=10)
-        try:
-            conn.request("GET" if payload is None else "POST", path,
-                         None if payload is None else json.dumps(payload),
-                         {} if payload is None else {"Content-Type": "application/json"})
-            response = conn.getresponse()
-            data = json.loads(response.read())
-            self.assertEqual(response.status, 200, data)
-            return data
-        finally:
-            conn.close()
-
-    def test_launch_chapter10_quiz_grade_and_exact_retest(self):
-        chapter = next(f for f in self.request('/api/morphology/files')["files"] if f["name"] == "ch10.md")
-        self.assertEqual(chapter["by_pos"], {"noun": 7, "adjective": 5, "verb": 7})
-        opts = {"files": ["ch10.md"], "exhaustive": True, "shuffle": False}
-        pool = self.request('/api/morphology/pool', opts)
-        self.assertEqual(pool["counts"], {"noun": 7, "adjective": 5, "verb": 7, "pair": 7})
-        quiz = self.request('/api/morphology/quiz', opts)
-        self.assertEqual(len(quiz["questions"]), 26)
-        questions = deepcopy(server.QUIZZES[quiz["id"]]["questions"])
-        answers = answers_for(questions)
-        capio = next(q for q in questions if q["kind"] == "verb" and q["prompt"] == "capiō")
-        answers[capio["index"]]["fields"]["infinitive"] = "wrong"
-        result = self.request('/api/grade', {"id": quiz["id"], "answers": answers})
-        self.assertEqual(result["score"]["missed"], 1)
-        retest = self.request('/api/retest', {"id": quiz["id"]})
-        self.assertEqual(retest["questions"], [{**quiz["questions"][capio["index"]], "index": 0}])
-        original = server.QUIZZES[retest["id"]]["questions"]
-        self.assertEqual(original[0]["fields"], capio["fields"])
-        self.assertEqual(self.request('/api/grade', {"id": retest["id"], "answers": answers_for(original)})
-                         ["score"]["missed"], 0)
-        vocabulary = self.request('/api/quiz', {"files": ["ch10.md"], "exhaustive": True})
-        self.assertEqual(len(vocabulary["questions"]), 21)
 
 
 if __name__ == '__main__':

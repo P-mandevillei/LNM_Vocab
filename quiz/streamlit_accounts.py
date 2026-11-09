@@ -188,7 +188,8 @@ def save_status(kind):
 
 def preserve_practice_state():
     """Keep saved widget settings from being cleaned up on the Account page."""
-    settings = {"_practice_tab", "files", "count", "mode", "parsing", "exhaustive", "shuffle", "retest_selection",
+    settings = {"_practice_tab", "files", "count", "mode", "parsing", "word_types",
+                "exhaustive", "shuffle", "retest_selection",
                 "morph_kinds", "morph_voices", "morph_tenses", "morph_moods", "morph_gender",
                 "morph_retest_selection"}
     for key in list(st.session_state):

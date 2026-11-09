@@ -1,4 +1,4 @@
-"""Streamlit UI for the same morphology engine used by server.py.
+"""Streamlit UI for the morphology engine.
 
 Morphology sessions and answer widgets have separate keys from vocabulary.
 Quiz/retest answer snapshots remain valid when chapters or overrides change.
@@ -65,7 +65,7 @@ def settings(shared):
     # survive Streamlit's widget cleanup and switching between the two tabs.
     with st.expander("Morphology settings", expanded=st.session_state.morph_view == "setup"):
         st.caption("Chapters, number of questions, Exhaustive and Shuffle order come from the sidebar. "
-                   "Vocabulary Mode and Also test parsing apply only to the Vocabulary tab.")
+                   "Word types, Mode and Also test parsing apply only to the Vocabulary tab.")
         kinds = st.multiselect("Entry types", list(m.KINDS), default=list(m.KINDS),
                                format_func=KIND_LABELS.get, key="morph_kinds")
         voices = st.multiselect("Verb voices", list(m.VOICES), default=list(m.VOICES),

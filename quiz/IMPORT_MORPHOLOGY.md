@@ -33,7 +33,7 @@ to create the corresponding SQLite file.
 If using the local virtual environment, replace `python` with
 `.\.venv\Scripts\python.exe`. The import-only dependency uses the operating
 system's trusted certificate store. HTTPS certificate verification stays on.
-Neither quiz front end needs this dependency to read the cache.
+Streamlit can read the cache without the import dependency.
 
 The first import makes one request per distinct lookup identity, at most one
 request per second. Later normal updates fetch new identities only. Chapter
@@ -51,8 +51,8 @@ bytes or modification time.
 
 - `data/morphology_cache.sqlite3`: acquisition records, review status, chapter
   bindings, and the published catalog and compressed answer forms.
-  Both quiz front ends read the catalog to check eligibility and fetch forms
-  by record ID after selection. They can fall back to JSON for an older or
+  The app reads the catalog to check eligibility and fetch forms
+  by record ID after selection. It can fall back to JSON for an older or
   custom cache. A custom cache can be compiled with `--compile-only --cache PATH`.
 - `data/collatinus_raw/`: content-addressed source responses for independent
   inspection and reparsing without another request.
@@ -80,8 +80,8 @@ retain the old table. A changed refresh of an approved table remains under
 `pending_refresh` until explicitly approved.
 
 Commit the chapters, cache and source responses together for deployment. The
-Streamlit app and plain server only read them; they never fetch tables while
-creating, grading or retesting a quiz. Custom vaults can use a cache named
+Streamlit app reads them locally when creating, grading or retesting a quiz.
+Custom vaults can use a cache named
 `morphology_cache.sqlite3` inside the vault.
 
 ## Inspect, retry and refresh

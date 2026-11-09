@@ -1,19 +1,13 @@
 """Future vocabulary, user-defined exceptions and live answer-key reloads."""
 
-from http.client import HTTPConnection
 import json
 from pathlib import Path
 import random
 from tempfile import TemporaryDirectory
-import threading
 import unittest
-from unittest.mock import patch
 
 import morphology as m
-from morphology_cache import empty_cache, save_json
 from morphology_data import LexiconError
-from morphology_store import compile_store
-import server
 import vocab
 
 
@@ -178,56 +172,6 @@ class ExtensibleAnswerKeys(unittest.TestCase):
         (self.vault / "morphology.json").write_text('{"version":1,"nouns":{},"nouns":{}}', encoding="utf-8")
         with self.assertRaisesRegex(LexiconError, "duplicate JSON key"):
             self.lexicon()
-
-    def test_live_http_reload_and_original_quiz_key(self):
-        # This fixture tests local rule overrides, independently of the bundled imports.
-        cache = self.vault / "morphology_cache.json"
-        save_json(cache, empty_cache())
-        compile_store(cache)
-        (self.vault / "ch10.md").write_text("**NOUNS**\nignis, ignis, m. - fire\n", encoding="utf-8")
-        httpd = server.Server(("127.0.0.1", 0), server.Handler)
-        thread = threading.Thread(target=httpd.serve_forever, daemon=True)
-        thread.start()
-
-        def request(path, body=None, status=200):
-            connection = HTTPConnection("127.0.0.1", httpd.server_port, timeout=10)
-            try:
-                connection.request("GET" if body is None else "POST", path,
-                                   None if body is None else json.dumps(body),
-                                   {} if body is None else {"Content-Type": "application/json"})
-                response = connection.getresponse()
-                data = json.loads(response.read())
-                self.assertEqual(response.status, status, data)
-                return data
-            finally:
-                connection.close()
-
-        try:
-            with patch.object(server, "VAULT", self.vault):
-                opts = {"files": ["ch10.md"], "kinds": ["noun"], "count": 1}
-                self.assertEqual(request('/api/morphology/pool', opts)["pool"], 0)
-                self.write(nouns={"ignis": {"declension": 3, "i_stem": True}})
-                self.assertEqual(request('/api/morphology/pool', opts)["pool"], 1)
-                quiz = request('/api/morphology/quiz', opts)
-                self.write(nouns={"ignis": {"declension": 3, "i_stem": True,
-                                            "overrides": {"genitive_plural": ["ignium", "ignum"]}}})
-                newer = request('/api/morphology/quiz', opts)
-                older_grade = request('/api/grade', {"id": quiz["id"], "answers": []})
-                newer_grade = request('/api/grade', {"id": newer["id"], "answers": []})
-                old_forms, new_forms = older_grade["results"][0]["fields"], newer_grade["results"][0]["fields"]
-                self.assertEqual(next(f["answer"] for f in old_forms if f["key"] == "genitive_plural"), "ignium")
-                self.assertEqual(next(f["answer"] for f in new_forms if f["key"] == "genitive_plural"), "ignium / ignum")
-                retest = request('/api/retest', {"id": quiz["id"]})
-                retest_grade = request('/api/grade', {"id": retest["id"], "answers": []})
-                self.assertEqual(retest_grade["results"][0]["fields"], old_forms)
-                (self.vault / "morphology.json").write_text('{broken json', encoding="utf-8")
-                self.assertIn('morphology.json', request('/api/morphology/files', status=400)['error'])
-                self.assertIn('morphology.json', request('/api/morphology/quiz', opts, status=400)['error'])
-                self.assertEqual(request('/api/files')["files"][0]["name"], 'ch10.md')
-        finally:
-            httpd.shutdown()
-            httpd.server_close()
-            thread.join()
 
 
 if __name__ == '__main__':

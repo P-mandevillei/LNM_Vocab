@@ -25,7 +25,7 @@ lemmas. Existing reviewed tables should not expire automatically.
 This is highly feasible for this application. The difficult part is selecting
 and validating a table provider, rather than storing the data or detecting new
 vocabulary. Keep the current question selection, grading, retesting and UI;
-introduce a shared table-lookup layer underneath both front ends.
+introduce a table-lookup layer beneath the quiz interface.
 
 “One import run” does not necessarily mean one HTTP request for the whole
 vocabulary. Collatinus's current daemon accepts one word per inflection request.
@@ -205,7 +205,7 @@ changes; adding ten new distinct lemmas requests only those ten; duplicated
 chapter words make no extra requests; ambiguous homographs are not merged;
 interrupted imports resume; negative results are not queried on every build;
 a failed refresh preserves old answers; missing future-topic coverage is
-reported; and both apps grade and retest correctly with network access disabled.
+reported; and the app grades and retests correctly with network access disabled.
 
 The existing plan's source-validation and curriculum milestones remain valid.
 The principal revision is to make durable, incremental acquisition a separate

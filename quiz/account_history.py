@@ -117,6 +117,11 @@ def practice_record(records, selection="wrong"):
         # A cumulative test can mix attempts with and without parsing.
         if len(records) > 1:
             opts["mode"] = "mixed"
+            filters = [record["configuration"].get("word_types", []) for record in records]
+            if all(filters):
+                opts["word_types"] = list(dict.fromkeys(pos for selection in filters for pos in selection))
+            else:
+                opts.pop("word_types", None)
         opts["parsing"] = any(record["configuration"]["parsing"] for record in records)
     else:
         for key in ("kinds", "voices", "tenses", "moods"):

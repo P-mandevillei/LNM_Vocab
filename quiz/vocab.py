@@ -128,6 +128,39 @@ POS_KEYWORDS = (
     ("expression", "phrase"),
 )
 
+WORD_TYPES = {
+    "noun": "Nouns",
+    "verb": "Verbs",
+    "adjective": "Adjectives",
+    "adverb": "Adverbs",
+    "pronoun": "Pronouns",
+    "preposition": "Prepositions",
+    "conjunction": "Conjunctions",
+    "interjection": "Interjections",
+    "numeral": "Numerals",
+    "participle": "Participles",
+    "phrase": "Phrases",
+    "other": "Other entries",
+}
+
+
+def word_type(pos: str) -> str:
+    return pos if pos in WORD_TYPES else "other"
+
+
+def validate_word_types(value) -> list[str]:
+    if not isinstance(value, list) or any(
+            not isinstance(item, str) or item not in WORD_TYPES for item in value):
+        raise ValueError("Choose valid word types from the list.")
+    return list(dict.fromkeys(value))
+
+
+def filter_word_types(pool: list[Entry], word_types: list[str]) -> list[Entry]:
+    if not word_types:
+        return pool
+    selected = set(word_types)
+    return [entry for entry in pool if word_type(entry.pos) in selected]
+
 
 # These never decline or conjugate, so a comma inside one is punctuation
 # rather than a form boundary.
@@ -618,12 +651,14 @@ def make_questions(chosen: list[Entry], twin_pool: list[Entry], mode: str,
 
 def build_quiz(pool: list[Entry], count: int, mode: str, include_parsing: bool,
                rng: random.Random | None = None, exhaustive: bool = False,
-               shuffle: bool = True) -> list[dict]:
+               shuffle: bool = True, *, twin_pool: list[Entry] | None = None) -> list[dict]:
+    """Draw from the eligible pool and accept synonyms from the supplied twin pool."""
     rng = rng or random.Random()
     if not pool:
         return []
     chosen = select_entries(pool, count, exhaustive, shuffle, rng)
-    return make_questions(chosen, pool, mode, include_parsing, rng)
+    return make_questions(chosen, pool if twin_pool is None else twin_pool,
+                          mode, include_parsing, rng)
 
 
 def grade(questions: list[dict], answers: list[dict]) -> dict:

@@ -3,8 +3,7 @@
 Run locally:      streamlit run quiz/streamlit_app.py
 Deploy:           point Streamlit Community Cloud at this file in the repo.
 
-Parsing, question building and grading are shared with the plain-Python server
-through vocab.py and morphology.py; these Streamlit modules are only the UI.
+The vocabulary and morphology engines handle parsing, question building and grading.
 Chapter markdown is read from the folder above this one, or from $LATIN_VAULT.
 """
 
@@ -90,8 +89,17 @@ st.markdown(CSS, unsafe_allow_html=True)
 # chapter loading
 # ---------------------------------------------------------------------------
 
-def load_pool(paths, files) -> list[vocab.Entry]:
-    return [entry for entries in vocab.load_chapters(VAULT, paths, files).values() for entry in entries]
+def draw_vocabulary(paths, opts: dict) -> list[dict]:
+    chapters = vocab.load_chapters(VAULT, paths, opts["files"])
+    pool = [entry for entries in chapters.values() for entry in entries]
+    eligible = vocab.filter_word_types(pool, opts["word_types"])
+    if not pool:
+        raise ValueError("No vocabulary found in the selected files.")
+    if not eligible:
+        raise ValueError("No vocabulary matches the selected word types in these chapters.")
+    return vocab.build_quiz(
+        eligible, opts["count"], opts["mode"], opts["parsing"],
+        random.Random(), opts["exhaustive"], opts["shuffle"], twin_pool=pool)
 
 
 # ---------------------------------------------------------------------------
@@ -173,9 +181,14 @@ def sidebar(paths, chapters: dict) -> dict:
                         label_visibility="collapsed")
 
         st.subheader("Options")
+        word_types = st.multiselect(
+            "Word types", list(vocab.WORD_TYPES), key="word_types",
+            format_func=vocab.WORD_TYPES.__getitem__,
+            placeholder="All word types",
+            help="Leave empty to include all word types in vocabulary quizzes and sheets.")
         exhaustive = st.checkbox(
             "Exhaustive", key="exhaustive",
-            help="Ask every word in the selected chapters, once each")
+            help="Ask every eligible word once")
         count = st.number_input("Number of questions", 1, 500, 10, key="count",
                                 disabled=exhaustive)
         shuffle = st.checkbox(
@@ -187,7 +200,8 @@ def sidebar(paths, chapters: dict) -> dict:
                  "the other genders for adjectives and pronouns")
 
     return {"files": files, "mode": mode, "count": int(count),
-            "exhaustive": exhaustive, "shuffle": shuffle, "parsing": parsing}
+            "exhaustive": exhaustive, "shuffle": shuffle, "parsing": parsing,
+            "word_types": word_types}
 
 
 # ---------------------------------------------------------------------------
@@ -198,9 +212,14 @@ def setup_view(paths, chapters: dict, opts: dict, deferred: bool) -> None:
     st.title("Latin Vocab Quiz")
     st.caption("Drawn from the chapter notes in this vault.")
 
-    total = sum(len(entries) for name, entries in chapters.items() if name in opts["files"])
-    if not total and not deferred:
+    if not opts["files"]:
         st.info("Pick at least one chapter in the sidebar.")
+        return
+    pool = [entry for name in opts["files"] for entry in chapters.get(name, [])]
+    total = len(vocab.filter_word_types(pool, opts["word_types"]))
+    if not total and not deferred:
+        st.info("No vocabulary matches the selected word types in these chapters." if pool
+                else "No vocabulary found in the selected files.")
         return
 
     if deferred:
@@ -214,13 +233,11 @@ def setup_view(paths, chapters: dict, opts: dict, deferred: bool) -> None:
         st.write(f"**{total}** words available.")
 
     if st.button("Start quiz", type="primary"):
-        pool = load_pool(paths, opts["files"])
-        if not pool:
-            st.info("No vocabulary found in the selected files.")
+        try:
+            questions = draw_vocabulary(paths, opts)
+        except ValueError as exc:
+            st.info(str(exc))
             return
-        questions = vocab.build_quiz(
-            pool, opts["count"], opts["mode"], opts["parsing"],
-            random.Random(), opts["exhaustive"], opts["shuffle"])
         begin_quiz(questions,
                    "Question sheet — every word" if opts["exhaustive"]
                    else "Question sheet",
@@ -232,7 +249,7 @@ def setup_view(paths, chapters: dict, opts: dict, deferred: bool) -> None:
 
 def printable_section(paths, opts: dict) -> None:
     with st.expander("Printable sheet"):
-        st.caption("Chapters, mode, count, exhaustive, shuffle and parsing "
+        st.caption("Chapters, word types, mode, count, exhaustive, shuffle and parsing "
                    "come from the sidebar. Download the sheet, then print it "
                    "from your browser (or save it as a PDF).")
         c1, c2, c3 = st.columns(3)
@@ -242,13 +259,11 @@ def printable_section(paths, opts: dict) -> None:
                                index=1)
 
         if st.button("Build sheet"):
-            pool = load_pool(paths, opts["files"])
-            if not pool:
-                st.info("No vocabulary found in the selected files.")
+            try:
+                questions = draw_vocabulary(paths, opts)
+            except ValueError as exc:
+                st.info(str(exc))
                 return
-            questions = vocab.build_quiz(
-                pool, opts["count"], opts["mode"], opts["parsing"],
-                random.Random(), opts["exhaustive"], opts["shuffle"])
             st.session_state.sheet = {
                 "html": render_sheet(questions, sorted(opts["files"]),
                                      opts["mode"], opts["exhaustive"],

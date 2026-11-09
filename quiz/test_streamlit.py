@@ -1,7 +1,7 @@
 """Run real Streamlit reruns, forms and session state using AppTest.
 
 Install requirements.txt to include these tests; plain-server-only installs
-can still run the engine/HTTP suite without Streamlit.
+can still run the engine tests without Streamlit.
 """
 
 from copy import deepcopy
@@ -54,6 +54,35 @@ class StreamlitMorphology(unittest.TestCase):
 
     def healthy(self, app):
         self.assertEqual([e.message for e in app.exception], [])
+
+    def test_vocabulary_word_types_filter_exhaustive_quiz_and_sheet(self):
+        app = self.app()
+        word_types = app.multiselect(key="word_types")
+        word_types.set_value(["numeral"]).run()
+        self.healthy(app)
+        self.assertTrue(any("No vocabulary matches" in message.value for message in app.info))
+
+        word_types = app.multiselect(key="word_types")
+        word_types.set_value(["noun", "verb"]).run()
+        self.healthy(app)
+        self.click(app, "Build sheet")
+        sheet = app.session_state.sheet
+        self.assertEqual(sheet["n"], 15)
+        self.assertNotIn('<span class="ppos">adjective</span>', sheet["html"])
+
+        self.click(app, "Start quiz")
+        questions = app.session_state.quiz
+        self.assertEqual(len(questions), 15)
+        self.assertEqual({q["pos"] for q in questions}, {"noun", "verb"})
+        record = deepcopy(app.session_state.record)
+        self.assertEqual(record["configuration"]["word_types"], ["noun", "verb"])
+
+        app.multiselect(key="word_types").set_value([]).run()
+        app.session_state.pending_record = record
+        app.run()
+        self.healthy(app)
+        self.assertEqual(app.multiselect(key="word_types").value, ["noun", "verb"])
+        self.assertEqual(app.session_state.quiz, questions)
 
     def test_vocabulary_loads_only_selected_reading_chapters_on_start(self):
         import vocab
